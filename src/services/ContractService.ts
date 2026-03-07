@@ -1,7 +1,7 @@
 import { getContract, IOP20Contract, OP_20_ABI } from 'opnet';
 import type { AbstractRpcProvider } from 'opnet';
 import type { Network } from '@btc-vision/bitcoin';
-import { networks } from '@btc-vision/bitcoin';
+import { isMainnet, isTestnet, isRegtest } from '../config/networks.js';
 
 /**
  * Singleton cache for OP20 contract instances.
@@ -40,9 +40,9 @@ class ContractService {
   }
 
   private networkId(network: Network): string {
-    if (network === networks.bitcoin) return 'mainnet';
-    if (network === networks.opnetTestnet) return 'testnet';
-    if (network === networks.regtest) return 'regtest';
+    if (isMainnet(network)) return 'mainnet';
+    if (isTestnet(network)) return 'testnet';
+    if (isRegtest(network)) return 'regtest';
     return 'unknown';
   }
 }
