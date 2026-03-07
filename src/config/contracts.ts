@@ -20,6 +20,11 @@ const MAINNET_SPENDERS: SpenderInfo[] = [
     description: 'OPNet native BTC↔token DEX',
   },
   {
+    address: '0x4397befe4e067390596b3c296e77fe86589487bf3bf3f0a9a93ce794e2d78fb5',
+    name: 'MotoSwap Native Swap',
+    description: 'MotoSwap native BTC↔token swap contract',
+  },
+  {
     address: '0xaccca433aec3878ebc041cde2a1a2656f928cc404377ebd8339f0bf2cdd66cbe',
     name: 'Staking',
     description: 'MOTO staking contract',
