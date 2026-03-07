@@ -1,8 +1,9 @@
 import { useCallback, useState } from 'react';
 import { Address } from '@btc-vision/transaction';
+import { fromBech32 } from '@btc-vision/bitcoin';
 import type { AbstractRpcProvider } from 'opnet';
 import type { Network } from '@btc-vision/bitcoin';
-import { getKnownSpenders } from '../config/contracts.js';
+import { getKnownSpenders, getKnownTokens } from '../config/contracts.js';
 import { discoverTokens } from '../services/TokenDiscovery.js';
 import { contractService } from '../services/ContractService.js';
 import type { AllowanceEntry, SpenderInfo, TokenInfo } from '../types/index.js';
@@ -128,7 +129,7 @@ export function useAllowances() {
       try {
         knownTokens = await discoverTokens(network);
       } catch {
-        // fall through to hardcoded empty list
+        knownTokens = getKnownTokens(network);
       }
 
       // Merge discovered tokens with any user-added custom tokens
@@ -199,7 +200,9 @@ export function useAllowances() {
 
           for (const spender of spenders) {
             try {
-              const spenderAddr = Address.fromString(spender.address);
+              const spenderAddr = spender.address.startsWith('0x')
+                ? Address.fromString(spender.address)
+                : Address.wrap(fromBech32(spender.address).data);
               const result = await contract.allowance(userAddress, spenderAddr);
               const remaining = result.properties.remaining;
 

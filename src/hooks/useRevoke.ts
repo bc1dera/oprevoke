@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { Address } from '@btc-vision/transaction';
+import { fromBech32 } from '@btc-vision/bitcoin';
 import type { AbstractRpcProvider } from 'opnet';
 import type { Network } from '@btc-vision/bitcoin';
 import { contractService } from '../services/ContractService.js';
@@ -31,8 +32,9 @@ export function useRevoke() {
       // who is calling.
       contract.setSender(userAddress);
 
-      // Address.fromString is safe with 0x hex strings (single param)
-      const spenderAddr = Address.fromString(spenderAddress);
+      const spenderAddr = spenderAddress.startsWith('0x')
+        ? Address.fromString(spenderAddress)
+        : Address.wrap(fromBech32(spenderAddress).data);
 
       // Step 1: Simulate
       const simulation = await contract.decreaseAllowance(spenderAddr, currentAllowance);
