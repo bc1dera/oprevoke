@@ -270,23 +270,24 @@ export default function App() {
               <div>
                 <button
                   onClick={() => setShowTokenInput((v) => !v)}
-                  className="text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1 transition-colors"
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-surface-600 bg-surface-800 hover:bg-surface-700 hover:border-surface-500 transition-colors text-sm font-medium text-gray-300"
                 >
+                  <span className="flex items-center gap-2">
+                    <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-brand-400">
+                      <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                    </svg>
+                    Add a custom token to scan
+                  </span>
                   <svg
                     viewBox="0 0 20 20"
                     fill="currentColor"
-                    className={`h-3 w-3 transition-transform ${showTokenInput ? 'rotate-90' : ''}`}
+                    className={`h-4 w-4 text-gray-500 transition-transform ${showTokenInput ? 'rotate-180' : ''}`}
                   >
-                    <path
-                      fillRule="evenodd"
-                      d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                      clipRule="evenodd"
-                    />
+                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                   </svg>
-                  Add a custom token to scan
                 </button>
                 {showTokenInput && (
-                  <div className="mt-3">
+                  <div className="mt-2">
                     <TokenInput
                       customTokens={customTokens}
                       provider={provider}
@@ -301,23 +302,24 @@ export default function App() {
               <div>
                 <button
                   onClick={() => setShowSpenderInput((v) => !v)}
-                  className="text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1 transition-colors"
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-surface-600 bg-surface-800 hover:bg-surface-700 hover:border-surface-500 transition-colors text-sm font-medium text-gray-300"
                 >
+                  <span className="flex items-center gap-2">
+                    <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-brand-400">
+                      <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                    </svg>
+                    Add a custom spender to scan against
+                  </span>
                   <svg
                     viewBox="0 0 20 20"
                     fill="currentColor"
-                    className={`h-3 w-3 transition-transform ${showSpenderInput ? 'rotate-90' : ''}`}
+                    className={`h-4 w-4 text-gray-500 transition-transform ${showSpenderInput ? 'rotate-180' : ''}`}
                   >
-                    <path
-                      fillRule="evenodd"
-                      d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                      clipRule="evenodd"
-                    />
+                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                   </svg>
-                  Add a custom spender to scan against
                 </button>
                 {showSpenderInput && (
-                  <div className="mt-3">
+                  <div className="mt-2">
                     <SpenderInput
                       customSpenders={customSpenders}
                       onAdd={addCustomSpender}
