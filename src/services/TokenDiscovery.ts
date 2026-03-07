@@ -50,7 +50,7 @@ export async function discoverTokens(network: Network): Promise<TokenInfo[]> {
   if (isMainnet(network)) {
     explorerUrl = 'https://explorer.opnet.org';
   } else if (isTestnet(network)) {
-    explorerUrl = 'https://testnet-explorer.opnet.org';
+    explorerUrl = 'https://testnet.opnet.org';
   } else {
     // Regtest — no public explorer, use hardcoded only
     return hardcoded;
