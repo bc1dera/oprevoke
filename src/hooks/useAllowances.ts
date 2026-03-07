@@ -184,6 +184,7 @@ export function useAllowances() {
             provider,
             network,
           );
+          contract.setSender(userAddress);
 
           try {
             const meta = await contract.metadata();
@@ -193,8 +194,8 @@ export function useAllowances() {
               symbol: meta.properties.symbol,
               decimals: meta.properties.decimals,
             };
-          } catch {
-            // keep pre-configured info
+          } catch (err) {
+            console.warn(`metadata(${token.address}):`, err);
           }
 
           for (const spender of spenders) {
@@ -212,8 +213,8 @@ export function useAllowances() {
                   status: 'idle',
                 });
               }
-            } catch {
-              // no allowance for this (token, spender) pair — skip silently
+            } catch (err) {
+              console.error(`allowance(${token.address}, ${spender.address}):`, err);
             }
           }
         } catch (err) {
