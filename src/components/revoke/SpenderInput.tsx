@@ -1,19 +1,15 @@
 import { useState, type FormEvent } from 'react';
-import { AddressVerificator } from '@btc-vision/transaction';
-import type { Network } from '@btc-vision/bitcoin';
 import { Button } from '../common/Button.js';
 import type { SpenderInfo } from '../../types/index.js';
 
 interface SpenderInputProps {
   customSpenders: SpenderInfo[];
-  network: Network;
   onAdd: (address: string, name: string) => void;
   onRemove: (address: string) => void;
 }
 
 export function SpenderInput({
   customSpenders,
-  network,
   onAdd,
   onRemove,
 }: SpenderInputProps) {
@@ -30,11 +26,10 @@ export function SpenderInput({
 
     if (!trimmedAddr) return;
 
-    const isOp1 = AddressVerificator.isValidP2OPAddress(trimmedAddr, network);
     const isHex = trimmedAddr.startsWith('0x') && trimmedAddr.length === 66;
 
-    if (!isOp1 && !isHex) {
-      setError('Enter a valid OPNet contract address (op1… or 0x…)');
+    if (!isHex) {
+      setError('Enter the contract address in 0x hex format (0x + 64 hex chars). Bech32 (op1…) addresses cannot be used for allowance queries.');
       return;
     }
 
@@ -55,7 +50,7 @@ export function SpenderInput({
           type="text"
           value={address}
           onChange={(e) => setAddress(e.target.value)}
-          placeholder="op1… or 0x… spender contract address"
+          placeholder="0x… spender contract address (32-byte hex)"
           className="w-full bg-surface-700 border border-surface-500 rounded-lg px-3 py-2 text-sm font-mono text-gray-200 placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
         />
         <div className="flex gap-2">

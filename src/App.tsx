@@ -320,7 +320,6 @@ export default function App() {
                   <div className="mt-3">
                     <SpenderInput
                       customSpenders={customSpenders}
-                      network={network}
                       onAdd={addCustomSpender}
                       onRemove={removeCustomSpender}
                     />
