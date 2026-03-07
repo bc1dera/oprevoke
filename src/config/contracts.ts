@@ -49,6 +49,11 @@ const TESTNET_TOKENS: TokenInfo[] = [
 ];
 const TESTNET_SPENDERS: SpenderInfo[] = [
   {
+    address: '0x4397befe4e067390596b3c296e77fe86589487bf3bf3f0a9a93ce794e2d78fb5',
+    name: 'MotoSwap Native Swap',
+    description: 'MotoSwap native BTC↔token swap contract on OPNet Signet Testnet',
+  },
+  {
     address: '0x0e6ff1f2d7db7556cb37729e3738f4dae82659b984b2621fab08e1111b1b937a',
     name: 'MotoSwap LP Router',
     description: 'MotoSwap add-liquidity / LP contract on OPNet Signet Testnet',
