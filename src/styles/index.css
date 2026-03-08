@@ -83,5 +83,10 @@ html.light .text-red-300     { color: #991b1b; }
 html.light .text-red-200     { color: #7f1d1d; }
 html.light .text-red-500     { color: #dc2626; }
 
-/* Green status dot */
-html.light .bg-green-400 { background-color: #16a34a; }
+/* Green status dot & revoked text */
+html.light .bg-green-400   { background-color: #16a34a; }
+html.light .text-green-400 { color: #15803d; }
+
+/* Risk badge backgrounds (/50 variants used in AllowanceRow) */
+html.light .bg-red-900\/50    { background-color: #fee2e2; }
+html.light .bg-yellow-900\/50 { background-color: #fef9c3; }

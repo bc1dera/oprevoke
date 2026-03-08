@@ -167,7 +167,7 @@ export default function App() {
               </svg>
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white leading-none">OPRevoke</h1>
+              <h1 className="text-lg font-bold text-gray-100 leading-none">OPRevoke</h1>
               <p className="text-xs text-gray-500 leading-none mt-0.5">
                 Revoke OP20 token approvals on OPNet
               </p>
