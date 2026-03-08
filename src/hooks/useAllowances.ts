@@ -118,6 +118,7 @@ export function useAllowances() {
       userAddress: Address,
       provider: AbstractRpcProvider,
       network: Network,
+      scanMode: 'known' | 'custom' = 'known',
     ) => {
       setScanning(true);
       setScanError(null);
@@ -136,12 +137,12 @@ export function useAllowances() {
       const extraCustom = customTokens.filter((ct) => !customAddrs.has(ct.address.toLowerCase()));
       const tokens = [...knownTokens, ...extraCustom];
 
-      const knownSpenders = getKnownSpenders(network);
-      const customSpenderAddrs = new Set(knownSpenders.map((s) => s.address.toLowerCase()));
-      const extraCustomSpenders = customSpenders.filter(
-        (cs) => !customSpenderAddrs.has(cs.address.toLowerCase()),
-      );
-      const spenders = [...knownSpenders, ...extraCustomSpenders];
+      let spenders: SpenderInfo[];
+      if (scanMode === 'custom') {
+        spenders = customSpenders;
+      } else {
+        spenders = getKnownSpenders(network);
+      }
 
       if (tokens.length === 0 && spenders.length === 0) {
         setScanStatus(null);
@@ -165,7 +166,9 @@ export function useAllowances() {
         setScanStatus(null);
         setScanning(false);
         setScanError(
-          'No spender contracts are configured for this network. Contact support or check back when mainnet spenders are available.',
+          scanMode === 'custom'
+            ? 'No custom spenders added. Use the input below to add a spender address.'
+            : 'No spender contracts are configured for this network. Contact support or check back when mainnet spenders are available.',
         );
         return;
       }

@@ -15,6 +15,7 @@ export default function App() {
   const { address, walletAddress, provider, network } = useWalletConnect();
   const isConnectedAndReady = !!walletAddress && !!address && !!provider && !!network;
 
+  const [activeTab, setActiveTab] = useState<'known' | 'custom'>('known');
   const [showTokenInput, setShowTokenInput] = useState(false);
   const [showSpenderInput, setShowSpenderInput] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -49,8 +50,15 @@ export default function App() {
   const handleScan = useCallback(() => {
     if (!address || !provider || !network) return;
     setSelectedIds(new Set());
-    void scan(address, provider, network);
-  }, [address, provider, network, scan]);
+    void scan(address, provider, network, activeTab);
+  }, [address, provider, network, scan, activeTab]);
+
+  const handleTabChange = useCallback((tab: 'known' | 'custom') => {
+    setActiveTab(tab);
+    setSelectedIds(new Set());
+    setShowTokenInput(false);
+    setShowSpenderInput(false);
+  }, []);
 
   const selectableIds = useMemo(
     () => entries.filter((e) => e.status !== 'revoked').map((e) => e.id),
@@ -232,12 +240,36 @@ export default function App() {
               </div>
             )}
 
-            {/* Scan controls */}
+            {/* Tabs */}
+            <div className="flex gap-1 p-1 rounded-xl bg-surface-800 border border-surface-600 w-fit">
+              {(
+                [
+                  { id: 'known', label: 'Known Spenders' },
+                  { id: 'custom', label: 'Custom Spenders' },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === tab.id
+                      ? 'bg-brand-500 text-white shadow-sm'
+                      : 'text-gray-400 hover:text-gray-200'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab description + scan controls */}
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-base font-semibold text-gray-200">Token Approvals</h2>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Automatically scans all known OP20 tokens for active allowances granted by your wallet.
+                  {activeTab === 'known'
+                    ? 'Scans all known OP20 tokens against hardcoded protocol spenders (MotoSwap, Staking, etc.).'
+                    : 'Scans all known OP20 tokens against your custom spender addresses only.'}
                 </p>
               </div>
               <Button
@@ -265,7 +297,7 @@ export default function App() {
               bulkRevoking={bulkRevoking}
             />
 
-            {/* Collapsible custom token + spender inputs */}
+            {/* Collapsible inputs — token input always shown; spender input only on custom tab */}
             <div className="space-y-3">
               <div>
                 <button
@@ -299,35 +331,37 @@ export default function App() {
                 )}
               </div>
 
-              <div>
-                <button
-                  onClick={() => setShowSpenderInput((v) => !v)}
-                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-surface-600 bg-surface-800 hover:bg-surface-700 hover:border-surface-500 transition-colors text-sm font-medium text-gray-300"
-                >
-                  <span className="flex items-center gap-2">
-                    <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-brand-400">
-                      <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                    </svg>
-                    Add a custom spender to scan against
-                  </span>
-                  <svg
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    className={`h-4 w-4 text-gray-500 transition-transform ${showSpenderInput ? 'rotate-180' : ''}`}
+              {activeTab === 'custom' && (
+                <div>
+                  <button
+                    onClick={() => setShowSpenderInput((v) => !v)}
+                    className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-surface-600 bg-surface-800 hover:bg-surface-700 hover:border-surface-500 transition-colors text-sm font-medium text-gray-300"
                   >
-                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </button>
-                {showSpenderInput && (
-                  <div className="mt-2">
-                    <SpenderInput
-                      customSpenders={customSpenders}
-                      onAdd={addCustomSpender}
-                      onRemove={removeCustomSpender}
-                    />
-                  </div>
-                )}
-              </div>
+                    <span className="flex items-center gap-2">
+                      <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-brand-400">
+                        <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                      </svg>
+                      Add a custom spender to scan against
+                    </span>
+                    <svg
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      className={`h-4 w-4 text-gray-500 transition-transform ${showSpenderInput ? 'rotate-180' : ''}`}
+                    >
+                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  {showSpenderInput && (
+                    <div className="mt-2">
+                      <SpenderInput
+                        customSpenders={customSpenders}
+                        onAdd={addCustomSpender}
+                        onRemove={removeCustomSpender}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Footer note */}
