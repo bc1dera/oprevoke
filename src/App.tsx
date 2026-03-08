@@ -26,6 +26,7 @@ export default function App() {
     scanning,
     scanError,
     scanStatus,
+    lastScan,
     customTokens,
     addCustomToken,
     removeCustomToken,
@@ -282,12 +283,39 @@ export default function App() {
               </Button>
             </div>
 
+            {/* Post-scan summary */}
+            {lastScan && !scanning && (
+              <div className="rounded-xl border border-surface-600 bg-surface-800/60 px-4 py-3 flex flex-wrap gap-3 items-start text-xs text-gray-400">
+                <span className="text-gray-300 font-medium">Last scan:</span>
+                <span>{lastScan.tokenCount} token{lastScan.tokenCount !== 1 ? 's' : ''}</span>
+                <span className="text-gray-600">·</span>
+                <span>{lastScan.spenders.length} spender{lastScan.spenders.length !== 1 ? 's' : ''}</span>
+                <span className="text-gray-600">·</span>
+                <span>{entries.filter((e) => e.status !== 'revoked').length} active allowance{entries.filter((e) => e.status !== 'revoked').length !== 1 ? 's' : ''} found</span>
+                {lastScan.mode === 'custom' && lastScan.spenders.length > 0 && (
+                  <>
+                    <span className="text-gray-600">·</span>
+                    <span className="text-gray-500">
+                      Scanned against:{' '}
+                      {lastScan.spenders.map((s, i) => (
+                        <span key={s.address}>
+                          <span className="text-gray-300 font-mono">{s.name}</span>
+                          {i < lastScan.spenders.length - 1 ? ', ' : ''}
+                        </span>
+                      ))}
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
+
             {/* Results table */}
             <AllowanceTable
               entries={entries}
               scanning={scanning}
               scanStatus={scanStatus}
               scanError={scanError}
+              hasScan={lastScan !== null}
               explorerUrl={networkConfig?.explorerUrl ?? 'https://explorer.opnet.org'}
               selectedIds={selectedIds}
               onSelect={handleSelect}

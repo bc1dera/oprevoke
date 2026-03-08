@@ -7,6 +7,7 @@ interface AllowanceTableProps {
   scanning: boolean;
   scanStatus: string | null;
   scanError: string | null;
+  hasScan: boolean;
   explorerUrl: string;
   selectedIds: Set<string>;
   bulkRevoking: boolean;
@@ -21,6 +22,7 @@ export function AllowanceTable({
   scanning,
   scanStatus,
   scanError,
+  hasScan,
   explorerUrl,
   selectedIds,
   bulkRevoking,
@@ -46,6 +48,30 @@ export function AllowanceTable({
   }
 
   if (entries.length === 0) {
+    if (!hasScan) {
+      return (
+        <div className="rounded-xl border border-surface-600 bg-surface-800 p-12 text-center">
+          <svg
+            className="mx-auto h-12 w-12 text-gray-600 mb-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.5}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+          <p className="text-gray-400 font-medium">No scan yet</p>
+          <p className="text-gray-500 text-sm mt-1">
+            Click <span className="text-gray-300 font-medium">Scan Approvals</span> to check for active token allowances.
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="rounded-xl border border-surface-600 bg-surface-800 p-12 text-center">
         <svg

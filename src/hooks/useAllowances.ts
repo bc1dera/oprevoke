@@ -10,6 +10,12 @@ import type { AllowanceEntry, SpenderInfo, TokenInfo } from '../types/index.js';
 const LS_TOKENS_KEY = 'oprevoke:customTokens';
 const LS_SPENDERS_KEY = 'oprevoke:customSpenders';
 
+export interface ScanSummary {
+  tokenCount: number;
+  spenders: SpenderInfo[];
+  mode: 'known' | 'custom';
+}
+
 function loadFromStorage<T>(key: string): T[] {
   try {
     const raw = localStorage.getItem(key);
@@ -33,6 +39,7 @@ export function useAllowances() {
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [scanStatus, setScanStatus] = useState<string | null>(null);
+  const [lastScan, setLastScan] = useState<ScanSummary | null>(null);
   const [customTokens, setCustomTokens] = useState<TokenInfo[]>(() => loadFromStorage<TokenInfo>(LS_TOKENS_KEY));
   const [customSpenders, setCustomSpenders] = useState<SpenderInfo[]>(() => loadFromStorage<SpenderInfo>(LS_SPENDERS_KEY));
 
@@ -123,6 +130,7 @@ export function useAllowances() {
       setScanning(true);
       setScanError(null);
       setEntries([]);
+      setLastScan(null);
       setScanStatus('Fetching token list…');
 
       let knownTokens: TokenInfo[] = [];
@@ -230,6 +238,7 @@ export function useAllowances() {
       }
 
       setEntries(results);
+      setLastScan({ tokenCount: tokens.length, spenders, mode: scanMode });
       setScanStatus(null);
       setScanning(false);
     },
@@ -254,6 +263,7 @@ export function useAllowances() {
     scanning,
     scanError,
     scanStatus,
+    lastScan,
     customTokens,
     addCustomToken,
     removeCustomToken,
