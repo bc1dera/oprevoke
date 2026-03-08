@@ -63,6 +63,11 @@ const TESTNET_SPENDERS: SpenderInfo[] = [
     name: 'MotoSwap Staking',
     description: 'MotoSwap staking contract on OPNet Signet Testnet',
   },
+  {
+    address: '0x2e2b3c8dae83a6921ea5e1b103fc33a36efc537bd4a987bb7a4dd062f0eca342',
+    name: 'Rad Ranch Farm',
+    description: 'Rad Ranch Farm contract on OPNet Signet Testnet',
+  },
 ];
 
 // ─── Regtest ──────────────────────────────────────────────────────────────────
