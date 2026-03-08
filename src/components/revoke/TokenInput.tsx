@@ -9,7 +9,7 @@ interface TokenInputProps {
   customTokens: TokenInfo[];
   provider: AbstractRpcProvider;
   network: Network;
-  onAdd: (address: string, provider: AbstractRpcProvider, network: Network) => void;
+  onAdd: (address: string, provider: AbstractRpcProvider, network: Network) => 'added' | 'already_custom' | 'already_hardcoded';
   onRemove: (address: string) => void;
 }
 
@@ -39,7 +39,15 @@ export function TokenInput({
       return;
     }
 
-    onAdd(trimmed, provider, network);
+    const result = onAdd(trimmed, provider, network);
+    if (result === 'already_custom') {
+      setError('This token is already in your custom list.');
+      return;
+    }
+    if (result === 'already_hardcoded') {
+      setError('This token is already built into OPRevoke and will be scanned automatically — no need to add it manually.');
+      return;
+    }
     setValue('');
   };
 

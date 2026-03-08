@@ -40,15 +40,17 @@ export function useAllowances() {
   const [scanError, setScanError] = useState<string | null>(null);
   const [scanStatus, setScanStatus] = useState<string | null>(null);
   const [lastScan, setLastScan] = useState<ScanSummary | null>(null);
+  const [scanErrors, setScanErrors] = useState<Array<{ address: string; name: string; error: string }>>([]);
   const [customTokens, setCustomTokens] = useState<TokenInfo[]>(() => loadFromStorage<TokenInfo>(LS_TOKENS_KEY));
   const [customSpenders, setCustomSpenders] = useState<SpenderInfo[]>(() => loadFromStorage<SpenderInfo>(LS_SPENDERS_KEY));
 
   const addCustomToken = useCallback(
-    (address: string, provider: AbstractRpcProvider, network: Network) => {
-      const already = customTokens.some(
-        (t) => t.address.toLowerCase() === address.toLowerCase(),
-      );
-      if (already) return;
+    (address: string, provider: AbstractRpcProvider, network: Network): 'added' | 'already_custom' | 'already_hardcoded' => {
+      const lc = address.toLowerCase();
+      const alreadyCustom = customTokens.some((t) => t.address.toLowerCase() === lc);
+      if (alreadyCustom) return 'already_custom';
+      const alreadyHardcoded = getKnownTokens(network).some((t) => t.address.toLowerCase() === lc);
+      if (alreadyHardcoded) return 'already_hardcoded';
 
       const placeholder: TokenInfo = {
         address,
@@ -85,6 +87,7 @@ export function useAllowances() {
           // keep placeholder
         }
       })();
+      return 'added';
     },
     [customTokens],
   );
@@ -131,6 +134,7 @@ export function useAllowances() {
       setScanError(null);
       setEntries([]);
       setLastScan(null);
+      setScanErrors([]);
       setScanStatus('Fetching token list…');
 
       let knownTokens: TokenInfo[] = [];
@@ -233,7 +237,12 @@ export function useAllowances() {
             }
           }
         } catch (err) {
+          const errMsg = err instanceof Error ? err.message : String(err);
           console.warn(`Could not scan token ${token.address}:`, err);
+          setScanErrors((prev) => [
+            ...prev,
+            { address: token.address, name: tokenInfo.symbol || tokenInfo.name, error: errMsg },
+          ]);
         }
       }
 
@@ -264,6 +273,7 @@ export function useAllowances() {
     scanError,
     scanStatus,
     lastScan,
+    scanErrors,
     customTokens,
     addCustomToken,
     removeCustomToken,

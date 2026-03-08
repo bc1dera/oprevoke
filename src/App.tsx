@@ -27,6 +27,7 @@ export default function App() {
     scanError,
     scanStatus,
     lastScan,
+    scanErrors,
     customTokens,
     addCustomToken,
     removeCustomToken,
@@ -306,6 +307,23 @@ export default function App() {
                     </span>
                   </>
                 )}
+              </div>
+            )}
+
+            {/* Per-token scan errors */}
+            {scanErrors.length > 0 && !scanning && (
+              <div className="rounded-xl border border-red-800 bg-red-900/20 px-4 py-3 space-y-1">
+                <p className="text-xs font-semibold text-red-400">
+                  {scanErrors.length} token{scanErrors.length !== 1 ? 's' : ''} failed to scan — these may have active approvals that could not be checked:
+                </p>
+                <ul className="space-y-0.5">
+                  {scanErrors.map((e) => (
+                    <li key={e.address} className="text-xs text-red-300 font-mono flex gap-2">
+                      <span className="font-semibold text-red-200 not-italic font-sans">{e.name}</span>
+                      <span className="text-red-500 truncate">{e.error}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
 
