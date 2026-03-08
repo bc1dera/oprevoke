@@ -2,6 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Surface color tokens (RGB channels for Tailwind opacity support) ── */
+:root {
+  --surface-900: 10 10 15;     /* #0a0a0f */
+  --surface-800: 17 17 24;     /* #111118 */
+  --surface-700: 26 26 38;     /* #1a1a26 */
+  --surface-600: 34 34 58;     /* #22223a */
+  --surface-500: 45 45 74;     /* #2d2d4a */
+}
+
+html.light {
+  --surface-900: 255 255 255;  /* #ffffff */
+  --surface-800: 248 250 252;  /* slate-50 */
+  --surface-700: 241 245 249;  /* slate-100 */
+  --surface-600: 226 232 240;  /* slate-200 */
+  --surface-500: 203 213 225;  /* slate-300 */
+}
+
 @layer base {
   html {
     font-family: 'Inter', system-ui, sans-serif;
@@ -10,6 +27,10 @@
 
   body {
     @apply bg-surface-900 text-gray-100 min-h-screen;
+  }
+
+  html.light body {
+    color: #111827;
   }
 
   * {
@@ -31,3 +52,36 @@
     @apply bg-surface-600;
   }
 }
+
+/* ── Light mode text overrides ── */
+html.light .text-gray-100 { color: #111827; }
+html.light .text-gray-200 { color: #1f2937; }
+html.light .text-gray-300 { color: #374151; }
+html.light .text-gray-400 { color: #4b5563; }
+html.light .text-gray-500 { color: #6b7280; }
+html.light .text-gray-600 { color: #9ca3af; }
+html.light .text-white    { color: #ffffff; } /* keep white text on colored buttons */
+
+html.light .placeholder-gray-500::placeholder { color: #9ca3af; }
+
+/* Input / textarea backgrounds */
+html.light .bg-surface-700 { background-color: rgb(var(--surface-700)); }
+
+/* Brand links stay readable in light mode */
+html.light .text-brand-400 { color: #c2410c; }
+html.light .text-brand-300 { color: #ea580c; }
+
+/* Warning/error panels — slightly adjusted for light mode */
+html.light .bg-yellow-900\/20 { background-color: #fef9c3; }
+html.light .border-yellow-800 { border-color: #ca8a04; }
+html.light .text-yellow-300   { color: #713f12; }
+
+html.light .bg-red-900\/20   { background-color: #fee2e2; }
+html.light .border-red-800   { border-color: #dc2626; }
+html.light .text-red-400     { color: #b91c1c; }
+html.light .text-red-300     { color: #991b1b; }
+html.light .text-red-200     { color: #7f1d1d; }
+html.light .text-red-500     { color: #dc2626; }
+
+/* Green status dot */
+html.light .bg-green-400 { background-color: #16a34a; }

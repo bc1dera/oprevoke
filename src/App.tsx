@@ -5,6 +5,7 @@ import { contractService } from './services/ContractService.js';
 import { getNetworkConfig } from './config/networks.js';
 import { useAllowances } from './hooks/useAllowances.js';
 import { useRevoke } from './hooks/useRevoke.js';
+import { useTheme } from './hooks/useTheme.js';
 import { ConnectButton } from './components/wallet/ConnectButton.js';
 import { TokenInput } from './components/revoke/TokenInput.js';
 import { SpenderInput } from './components/revoke/SpenderInput.js';
@@ -14,6 +15,7 @@ import { Button } from './components/common/Button.js';
 export default function App() {
   const { address, walletAddress, provider, network } = useWalletConnect();
   const isConnectedAndReady = !!walletAddress && !!address && !!provider && !!network;
+  const { theme, toggle: toggleTheme } = useTheme();
 
   const [activeTab, setActiveTab] = useState<'known' | 'custom'>('known');
   const [showTokenInput, setShowTokenInput] = useState(false);
@@ -171,7 +173,27 @@ export default function App() {
               </p>
             </div>
           </div>
-          <ConnectButton />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleTheme}
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              className="h-8 w-8 rounded-lg border border-surface-600 bg-surface-800 hover:bg-surface-700 flex items-center justify-center text-gray-400 hover:text-gray-200 transition-colors"
+            >
+              {theme === 'dark' ? (
+                /* Sun icon */
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                  <circle cx="12" cy="12" r="4" />
+                  <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+                </svg>
+              ) : (
+                /* Moon icon */
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                  <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+                </svg>
+              )}
+            </button>
+            <ConnectButton />
+          </div>
         </div>
       </header>
 

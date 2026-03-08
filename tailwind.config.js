@@ -12,11 +12,11 @@ export default {
           600: '#ea580c',
         },
         surface: {
-          900: '#0a0a0f',
-          800: '#111118',
-          700: '#1a1a26',
-          600: '#22223a',
-          500: '#2d2d4a',
+          900: 'rgb(var(--surface-900) / <alpha-value>)',
+          800: 'rgb(var(--surface-800) / <alpha-value>)',
+          700: 'rgb(var(--surface-700) / <alpha-value>)',
+          600: 'rgb(var(--surface-600) / <alpha-value>)',
+          500: 'rgb(var(--surface-500) / <alpha-value>)',
         },
       },
       fontFamily: {
