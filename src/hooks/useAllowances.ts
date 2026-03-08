@@ -216,12 +216,8 @@ export function useAllowances() {
           for (const spender of spenders) {
             try {
               const spenderAddr = Address.fromString(spender.address);
-              console.debug(
-                `[allowance] token=${token.address} owner=${userAddress.toHex()} spender=${spenderAddr.toHex()}`,
-              );
               const result = await contract.allowance(userAddress, spenderAddr);
               const remaining = result.properties.remaining;
-              console.debug(`[allowance] remaining=${remaining.toString()}`);
 
               if (remaining > 0n) {
                 results.push({
@@ -233,7 +229,16 @@ export function useAllowances() {
                 });
               }
             } catch (err) {
+              const errMsg = err instanceof Error ? err.message : String(err);
               console.error(`allowance(${token.address}, ${spender.address}):`, err);
+              setScanErrors((prev) => [
+                ...prev,
+                {
+                  address: token.address,
+                  name: `${tokenInfo.symbol || tokenInfo.name} vs ${spender.name}`,
+                  error: errMsg,
+                },
+              ]);
             }
           }
         } catch (err) {
