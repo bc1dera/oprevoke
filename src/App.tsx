@@ -67,6 +67,27 @@ export default function App() {
     prevNetworkRef.current = network;
   }, [network]);
 
+  // Work around a stale-closure bug in @btc-vision/walletconnect: the library
+  // registers its chainChanged hook before setSelectedWallet fires, so the
+  // captured selectedWallet is null and setNetwork() is never called when the
+  // user switches networks.  We attach our own listener directly on the raw
+  // walletInstance and reload — the library auto-reconnects on load with the
+  // correct network already set.
+  useEffect(() => {
+    if (!walletInstance) return;
+    const wi = walletInstance as unknown as {
+      on?: (event: string, fn: () => void) => void;
+      removeListener?: (event: string, fn: () => void) => void;
+    };
+    const handleChainChanged = () => {
+      window.location.reload();
+    };
+    wi.on?.('chainChanged', handleChainChanged);
+    return () => {
+      wi.removeListener?.('chainChanged', handleChainChanged);
+    };
+  }, [walletInstance]);
+
   // Restore cached scan results when wallet connects
   const didRestoreCacheRef = useRef(false);
   useEffect(() => {
