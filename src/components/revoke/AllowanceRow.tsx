@@ -111,16 +111,29 @@ export function AllowanceRow({
       {/* Action */}
       <td className="px-4 py-3 text-right">
         {status === 'revoked' ? (
-          <span className="inline-flex items-center gap-1 text-xs text-green-400 font-medium">
-            <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-              <path
-                fillRule="evenodd"
-                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                clipRule="evenodd"
-              />
-            </svg>
-            Revoked
-          </span>
+          <div className="flex flex-col items-end gap-1">
+            <span className="inline-flex items-center gap-1 text-xs text-green-400 font-medium">
+              <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path
+                  fillRule="evenodd"
+                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              Revoked
+            </span>
+            {entry.txId && (
+              <a
+                href={`${explorerUrl}/tx/${entry.txId}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs font-mono text-brand-400 hover:text-brand-300 transition-colors"
+                title={entry.txId}
+              >
+                {entry.txId.slice(0, 10)}…{entry.txId.slice(-6)} ↗
+              </a>
+            )}
+          </div>
         ) : status === 'error' ? (
           <div className="flex flex-col items-end gap-1">
             <button
