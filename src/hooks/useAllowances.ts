@@ -217,9 +217,132 @@ export function useAllowances() {
       if (scanMode === 'known') {
         setScanStatus('Scanning blocks for approvals…');
 
+        // Shared state across streaming callbacks — keyed by lowercase address
+        const verifiedKeys = new Set<string>();
+        const tokenMetaMap = new Map<string, TokenInfo>();
+        const knownSpenders = getKnownSpenders(network);
+        const spenderNameMap = new Map(knownSpenders.map((s) => [s.address.toLowerCase(), s]));
+        const allErrors: Array<{ address: string; name: string; error: string }> = [];
+
+        /**
+         * Verify a batch of discovered approvals and append any with
+         * remaining > 0 directly to the entries state.  Called both from the
+         * streaming callback (new discoveries) and after the scan returns
+         * (cached entries not yet verified).
+         */
+        const verifyAndDisplay = async (batch: import('../services/ApprovalScanner.js').DiscoveredApproval[]) => {
+          // Verify on-chain allowances in parallel
+          const verifyResults = await Promise.allSettled(
+            batch.map(async (d) => {
+              const contract = contractService.getTokenContract(d.tokenAddress, provider, network);
+              contract.setSender(userAddress);
+              const spenderAddr = Address.fromString(d.spenderAddress);
+              const result = await contract.allowance(userAddress, spenderAddr);
+              return { d, remaining: result.properties.remaining };
+            }),
+          );
+
+          const active = verifyResults
+            .filter(
+              (r): r is PromiseFulfilledResult<{
+                d: import('../services/ApprovalScanner.js').DiscoveredApproval;
+                remaining: bigint;
+              }> => r.status === 'fulfilled' && r.value.remaining > 0n,
+            )
+            .map((r) => r.value);
+
+          // Accumulate errors
+          for (const r of verifyResults) {
+            if (r.status === 'rejected') {
+              allErrors.push({
+                address: 'unknown',
+                name: 'Unknown token',
+                error: r.reason instanceof Error ? r.reason.message : String(r.reason),
+              });
+            }
+          }
+
+          if (active.length === 0) return;
+
+          // Fetch metadata for token addresses we haven't seen yet
+          const newTokenAddrs = [...new Set(active.map((r) => r.d.tokenAddress))].filter(
+            (addr) => !tokenMetaMap.has(addr.toLowerCase()),
+          );
+
+          await Promise.allSettled(
+            newTokenAddrs.map(async (addr) => {
+              const contract = contractService.getTokenContract(addr, provider, network);
+              contract.setSender(userAddress);
+              try {
+                const meta = await contract.metadata();
+                tokenMetaMap.set(addr.toLowerCase(), {
+                  address: addr,
+                  name: meta.properties.name,
+                  symbol: meta.properties.symbol,
+                  decimals: meta.properties.decimals,
+                });
+              } catch {
+                tokenMetaMap.set(addr.toLowerCase(), {
+                  address: addr,
+                  name: addr.slice(0, 10) + '…',
+                  symbol: '???',
+                  decimals: 8,
+                });
+              }
+            }),
+          );
+
+          // Append new entries to the table immediately
+          const newEntries: AllowanceEntry[] = active.map(({ d, remaining }) => {
+            const tokenInfo = tokenMetaMap.get(d.tokenAddress.toLowerCase()) ?? {
+              address: d.tokenAddress,
+              name: d.tokenAddress.slice(0, 10) + '…',
+              symbol: '???',
+              decimals: 8,
+            };
+            const spenderLower = d.spenderAddress.toLowerCase();
+            const spenderInfo: SpenderInfo = spenderNameMap.get(spenderLower) ?? {
+              address: d.spenderAddress,
+              name: d.spenderAddress.slice(0, 10) + '…',
+              description: 'Discovered from approval history',
+            };
+            return {
+              id: `${d.tokenAddress.toLowerCase()}:${spenderLower}`,
+              token: tokenInfo,
+              spender: spenderInfo,
+              allowance: remaining,
+              status: 'idle',
+            };
+          });
+
+          setEntries((prev) => [...prev, ...newEntries]);
+        };
+
+        // Streaming callback — called after each concurrent window of blocks.
+        // The scanner awaits this before starting the next window, so it runs
+        // serially with no concurrent access concerns.
+        const handleNewApprovals = async (
+          newApprovals: import('../services/ApprovalScanner.js').DiscoveredApproval[],
+        ) => {
+          const unverified = newApprovals.filter((d) => {
+            const key = `${d.tokenAddress.toLowerCase()}:${d.spenderAddress.toLowerCase()}`;
+            if (verifiedKeys.has(key)) return false;
+            verifiedKeys.add(key);
+            return true;
+          });
+          if (unverified.length === 0) return;
+          await verifyAndDisplay(unverified);
+        };
+
         let discoveredMap: Map<string, import('../services/ApprovalScanner.js').DiscoveredApproval>;
         try {
-          discoveredMap = await scanForApprovals(provider, network, userAddress, setScanStatus);
+          discoveredMap = await scanForApprovals(
+            provider,
+            network,
+            userAddress,
+            setScanStatus,
+            handleNewApprovals,
+          );
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Unknown error';
           setScanError(`Block scan failed: ${msg}`);
@@ -228,125 +351,52 @@ export function useAllowances() {
           return;
         }
 
-        const discovered = [...discoveredMap.values()];
+        // Verify cached entries that weren't seen during this scan's callbacks
+        // (happens on repeat scans when no new blocks have arrived, or when the
+        // cache already had entries before scanning started).
+        const cachedUnverified = [...discoveredMap.values()].filter((d) => {
+          const key = `${d.tokenAddress.toLowerCase()}:${d.spenderAddress.toLowerCase()}`;
+          if (verifiedKeys.has(key)) return false;
+          verifiedKeys.add(key);
+          return true;
+        });
 
-        if (discovered.length === 0) {
+        if (cachedUnverified.length > 0) {
+          setScanStatus(
+            `Verifying ${cachedUnverified.length} cached approval${cachedUnverified.length !== 1 ? 's' : ''}…`,
+          );
+          await verifyAndDisplay(cachedUnverified);
+        }
+
+        if (discoveredMap.size === 0) {
           setScanError(
             'No token approvals found in your transaction history. ' +
-            'If you have approvals on an older part of the chain, try switching to the Custom Spenders tab.',
+              'If you have approvals on an older part of the chain, try switching to the Custom Spenders tab.',
           );
           setScanStatus(null);
           setScanning(false);
           return;
         }
 
-        setScanStatus(`Verifying ${discovered.length} discovered approval${discovered.length !== 1 ? 's' : ''}…`);
-
-        // Verify each discovered approval is still active on-chain
-        const verifyResults = await Promise.allSettled(
-          discovered.map(async (d) => {
-            const contract = contractService.getTokenContract(d.tokenAddress, provider, network);
-            contract.setSender(userAddress);
-            const spenderAddr = Address.fromString(d.spenderAddress);
-            const result = await contract.allowance(userAddress, spenderAddr);
-            return { d, remaining: result.properties.remaining, spenderAddr };
-          }),
-        );
-
-        // Collect active (remaining > 0) allowances
-        const active = verifyResults.filter(
-          (r): r is PromiseFulfilledResult<{
-            d: (typeof discovered)[number];
-            remaining: bigint;
-            spenderAddr: Address;
-          }> => r.status === 'fulfilled' && r.value.remaining > 0n,
-        );
-
-        // Fetch metadata for unique token addresses
-        const uniqueTokenAddrs = [...new Set(active.map((r) => r.value.d.tokenAddress))];
-        const tokenMetaMap = new Map<string, TokenInfo>();
-
-        await Promise.allSettled(
-          uniqueTokenAddrs.map(async (addr) => {
-            const contract = contractService.getTokenContract(addr, provider, network);
-            contract.setSender(userAddress);
-            try {
-              const meta = await contract.metadata();
-              tokenMetaMap.set(addr.toLowerCase(), {
-                address: addr,
-                name: meta.properties.name,
-                symbol: meta.properties.symbol,
-                decimals: meta.properties.decimals,
-              });
-            } catch {
-              tokenMetaMap.set(addr.toLowerCase(), {
-                address: addr,
-                name: addr.slice(0, 10) + '…',
-                symbol: '???',
-                decimals: 8,
-              });
-            }
-          }),
-        );
-
-        // Build spender name lookup from known spenders config
-        const knownSpenders = getKnownSpenders(network);
-        const spenderNameMap = new Map(
-          knownSpenders.map((s) => [s.address.toLowerCase(), s]),
-        );
-
-        // Build final entries
-        const results: AllowanceEntry[] = [];
-        const errors: Array<{ address: string; name: string; error: string }> = [];
-
-        for (const result of verifyResults) {
-          if (result.status === 'rejected') {
-            errors.push({
-              address: 'unknown',
-              name: 'Unknown token',
-              error: result.reason instanceof Error ? result.reason.message : String(result.reason),
-            });
-            continue;
-          }
-          const { d, remaining } = result.value;
-          if (remaining <= 0n) continue;
-
-          const tokenInfo = tokenMetaMap.get(d.tokenAddress.toLowerCase()) ?? {
-            address: d.tokenAddress,
-            name: d.tokenAddress.slice(0, 10) + '…',
-            symbol: '???',
-            decimals: 8,
+        // Build summary from final entries state
+        setEntries((finalEntries) => {
+          const uniqueSpenders = [
+            ...new Map(finalEntries.map((r) => [r.spender.address.toLowerCase(), r.spender])).values(),
+          ];
+          const uniqueTokens = [...new Set(finalEntries.map((r) => r.token.address.toLowerCase()))];
+          const summary: ScanSummary = {
+            tokenCount: uniqueTokens.length,
+            spenders: uniqueSpenders,
+            mode: 'known',
           };
+          setLastScan(summary);
+          persistScanResults(finalEntries, summary, network, walletAddress);
+          return finalEntries;
+        });
 
-          const spenderLower = d.spenderAddress.toLowerCase();
-          const spenderInfo: SpenderInfo = spenderNameMap.get(spenderLower) ?? {
-            address: d.spenderAddress,
-            name: d.spenderAddress.slice(0, 10) + '…',
-            description: 'Discovered from approval history',
-          };
-
-          results.push({
-            id: `${d.tokenAddress.toLowerCase()}:${spenderLower}`,
-            token: tokenInfo,
-            spender: spenderInfo,
-            allowance: remaining,
-            status: 'idle',
-          });
-        }
-
-        const uniqueSpenders = [...new Map(results.map((r) => [r.spender.address.toLowerCase(), r.spender])).values()];
-        const summary: ScanSummary = {
-          tokenCount: uniqueTokenAddrs.length,
-          spenders: uniqueSpenders,
-          mode: 'known',
-        };
-
-        setEntries(results);
-        setScanErrors(errors);
-        setLastScan(summary);
+        setScanErrors(allErrors);
         setScanStatus(null);
         setScanning(false);
-        persistScanResults(results, summary, network, walletAddress);
         return;
       }
 

@@ -124,6 +124,11 @@ const INITIAL_SCAN_DEPTH = 10_000; // blocks to scan on first run
  * recently observed allowance amount.  Results are cached and subsequent
  * calls only fetch new blocks since the last scan.
  *
+ * `onNewApprovals` is called (and awaited) after each concurrent window
+ * completes, receiving only the approvals that are brand-new in that window.
+ * This lets callers verify and display results progressively rather than
+ * waiting for the entire scan to finish.
+ *
  * The caller should verify each entry with `contract.allowance()` before
  * displaying, since the on-chain value may differ from the event amount.
  */
@@ -132,6 +137,7 @@ export async function scanForApprovals(
   network: Network,
   userAddress: Address,
   onProgress?: (message: string) => void,
+  onNewApprovals?: (approvals: DiscoveredApproval[]) => Promise<void>,
 ): Promise<Map<string, DiscoveredApproval>> {
   const networkId = getNetworkId(network);
   const userHex = userAddress.toHex().toLowerCase();
@@ -162,9 +168,14 @@ export async function scanForApprovals(
     batches.push(Array.from({ length: end - start + 1 }, (_, i) => start + i));
   }
 
-  // Fetch batches with limited concurrency
+  // Fetch batches with limited concurrency; notify caller of new discoveries
+  // after each concurrent window so they can verify + display progressively.
   for (let i = 0; i < batches.length; i += CONCURRENT_BATCHES) {
     const window = batches.slice(i, i + CONCURRENT_BATCHES);
+
+    // Snapshot keys before this window to detect new entries
+    const keysBefore = new Set(approvals.keys());
+
     const results = await Promise.allSettled(
       window.map((blockNums) => provider.getBlocks(blockNums, true /* prefetchTxs */)),
     );
@@ -198,6 +209,16 @@ export async function scanForApprovals(
             }
           }
         }
+      }
+    }
+
+    // Notify caller of brand-new discoveries from this window
+    if (onNewApprovals) {
+      const newApprovals = [...approvals.entries()]
+        .filter(([k]) => !keysBefore.has(k))
+        .map(([, v]) => v);
+      if (newApprovals.length > 0) {
+        await onNewApprovals(newApprovals);
       }
     }
   }
