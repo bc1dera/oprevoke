@@ -262,18 +262,20 @@ export function useAllowances() {
           const contract = contractService.getTokenContract(token.address, provider, network);
           contract.setSender(userAddress);
 
-          // Refresh metadata in case custom token placeholder still has '???'
+          // Only fetch metadata for custom tokens that have placeholder info
           let tokenInfo: TokenInfo = token;
-          try {
-            const meta = await contract.metadata();
-            tokenInfo = {
-              ...token,
-              name: meta.properties.name,
-              symbol: meta.properties.symbol,
-              decimals: meta.properties.decimals,
-            };
-          } catch {
-            // keep existing info
+          if (token.symbol === '???') {
+            try {
+              const meta = await contract.metadata();
+              tokenInfo = {
+                ...token,
+                name: meta.properties.name,
+                symbol: meta.properties.symbol,
+                decimals: meta.properties.decimals,
+              };
+            } catch {
+              // keep existing info
+            }
           }
 
           // Check all spenders for this token in parallel
