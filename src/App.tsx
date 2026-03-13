@@ -56,7 +56,7 @@ export default function App() {
     restoreFromCache,
   } = useAllowances();
 
-  const { revoke } = useRevoke();
+  const { revoke, batchRevoke } = useRevoke();
 
   // Clear contract cache when network changes to avoid stale providers
   const prevNetworkRef = useRef<Network | null>(null);
@@ -144,32 +144,37 @@ export default function App() {
 
     setBulkRevoking(true);
 
+    // Mark all selected entries as revoking upfront so the user sees immediate feedback
     for (const entry of toRevoke) {
       updateEntryStatus(entry.id, 'revoking');
-      try {
-        const txId = await revoke(
-          entry.token.address,
-          entry.spender.address,
-          entry.allowance,
-          walletAddress,
-          address,
-          provider,
-          network,
-        );
-        updateEntryStatus(entry.id, 'revoked', undefined, txId);
-        setSelectedIds((prev) => {
-          const next = new Set(prev);
-          next.delete(entry.id);
-          return next;
-        });
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Unknown error';
-        updateEntryStatus(entry.id, 'error', msg);
-      }
     }
 
+    await batchRevoke(
+      toRevoke.map((e) => ({
+        id: e.id,
+        tokenAddress: e.token.address,
+        spenderAddress: e.spender.address,
+        currentAllowance: e.allowance,
+      })),
+      walletAddress,
+      address,
+      provider,
+      network,
+      (id, txId) => {
+        updateEntryStatus(id, 'revoked', undefined, txId);
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      },
+      (id, msg) => {
+        updateEntryStatus(id, 'error', msg);
+      },
+    );
+
     setBulkRevoking(false);
-  }, [entries, selectedIds, provider, network, walletAddress, bulkRevoking, revoke, updateEntryStatus]);
+  }, [entries, selectedIds, provider, network, walletAddress, address, bulkRevoking, batchRevoke, updateEntryStatus]);
 
   const handleRevoke = useCallback(
     async (id: string) => {
