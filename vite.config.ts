@@ -14,4 +14,19 @@ export default defineConfig({
   optimizeDeps: {
     include: ['buffer'],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom'],
+          opnet: ['opnet'],
+          btcvision: [
+            '@btc-vision/bitcoin',
+            '@btc-vision/transaction',
+            '@btc-vision/walletconnect',
+          ],
+        },
+      },
+    },
+  },
 });
