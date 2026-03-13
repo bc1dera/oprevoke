@@ -346,7 +346,7 @@ export default function App() {
             <div className="flex gap-1 p-1 rounded-xl bg-surface-800 border border-surface-600 w-fit">
               {(
                 [
-                  { id: 'known', label: 'Known Spenders' },
+                  { id: 'known', label: 'Auto Scan' },
                   { id: 'custom', label: 'Custom Spenders' },
                 ] as const
               ).map((tab) => (
@@ -370,8 +370,8 @@ export default function App() {
                 <h2 className="text-base font-semibold text-gray-200">Token Approvals</h2>
                 <p className="text-xs text-gray-500 mt-0.5">
                   {activeTab === 'known'
-                    ? 'Scans all known OP20 tokens against hardcoded protocol spenders (MotoSwap, Staking, etc.).'
-                    : 'Scans all known OP20 tokens against your custom spender addresses only.'}
+                    ? 'Scans your full block history for Approved events — automatically finds every token and spender you have ever approved.'
+                    : 'Scans known tokens against your custom spender addresses.'}
                 </p>
               </div>
               <Button

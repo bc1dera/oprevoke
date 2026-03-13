@@ -5,6 +5,7 @@ import type { Network } from '@btc-vision/bitcoin';
 import { getKnownSpenders, getKnownTokens } from '../config/contracts.js';
 import { isMainnet, isTestnet } from '../config/networks.js';
 import { discoverDeployedContracts, discoverTokens } from '../services/TokenDiscovery.js';
+import { scanForApprovals } from '../services/ApprovalScanner.js';
 import { contractService } from '../services/ContractService.js';
 import type { AllowanceEntry, SpenderInfo, TokenInfo } from '../types/index.js';
 
@@ -211,12 +212,147 @@ export function useAllowances() {
       setEntries([]);
       setLastScan(null);
       setScanErrors([]);
+
+      // ── 'known' tab: auto-discover via Approved event scanning ──────────
+      if (scanMode === 'known') {
+        setScanStatus('Scanning blocks for approvals…');
+
+        let discoveredMap: Map<string, import('../services/ApprovalScanner.js').DiscoveredApproval>;
+        try {
+          discoveredMap = await scanForApprovals(provider, network, userAddress, setScanStatus);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Unknown error';
+          setScanError(`Block scan failed: ${msg}`);
+          setScanStatus(null);
+          setScanning(false);
+          return;
+        }
+
+        const discovered = [...discoveredMap.values()];
+
+        if (discovered.length === 0) {
+          setScanError(
+            'No token approvals found in your transaction history. ' +
+            'If you have approvals on an older part of the chain, try switching to the Custom Spenders tab.',
+          );
+          setScanStatus(null);
+          setScanning(false);
+          return;
+        }
+
+        setScanStatus(`Verifying ${discovered.length} discovered approval${discovered.length !== 1 ? 's' : ''}…`);
+
+        // Verify each discovered approval is still active on-chain
+        const verifyResults = await Promise.allSettled(
+          discovered.map(async (d) => {
+            const contract = contractService.getTokenContract(d.tokenAddress, provider, network);
+            contract.setSender(userAddress);
+            const spenderAddr = Address.fromString(d.spenderAddress);
+            const result = await contract.allowance(userAddress, spenderAddr);
+            return { d, remaining: result.properties.remaining, spenderAddr };
+          }),
+        );
+
+        // Collect active (remaining > 0) allowances
+        const active = verifyResults.filter(
+          (r): r is PromiseFulfilledResult<{
+            d: (typeof discovered)[number];
+            remaining: bigint;
+            spenderAddr: Address;
+          }> => r.status === 'fulfilled' && r.value.remaining > 0n,
+        );
+
+        // Fetch metadata for unique token addresses
+        const uniqueTokenAddrs = [...new Set(active.map((r) => r.value.d.tokenAddress))];
+        const tokenMetaMap = new Map<string, TokenInfo>();
+
+        await Promise.allSettled(
+          uniqueTokenAddrs.map(async (addr) => {
+            const contract = contractService.getTokenContract(addr, provider, network);
+            contract.setSender(userAddress);
+            try {
+              const meta = await contract.metadata();
+              tokenMetaMap.set(addr.toLowerCase(), {
+                address: addr,
+                name: meta.properties.name,
+                symbol: meta.properties.symbol,
+                decimals: meta.properties.decimals,
+              });
+            } catch {
+              tokenMetaMap.set(addr.toLowerCase(), {
+                address: addr,
+                name: addr.slice(0, 10) + '…',
+                symbol: '???',
+                decimals: 8,
+              });
+            }
+          }),
+        );
+
+        // Build spender name lookup from known spenders config
+        const knownSpenders = getKnownSpenders(network);
+        const spenderNameMap = new Map(
+          knownSpenders.map((s) => [s.address.toLowerCase(), s]),
+        );
+
+        // Build final entries
+        const results: AllowanceEntry[] = [];
+        const errors: Array<{ address: string; name: string; error: string }> = [];
+
+        for (const result of verifyResults) {
+          if (result.status === 'rejected') {
+            errors.push({
+              address: 'unknown',
+              name: 'Unknown token',
+              error: result.reason instanceof Error ? result.reason.message : String(result.reason),
+            });
+            continue;
+          }
+          const { d, remaining } = result.value;
+          if (remaining <= 0n) continue;
+
+          const tokenInfo = tokenMetaMap.get(d.tokenAddress.toLowerCase()) ?? {
+            address: d.tokenAddress,
+            name: d.tokenAddress.slice(0, 10) + '…',
+            symbol: '???',
+            decimals: 8,
+          };
+
+          const spenderLower = d.spenderAddress.toLowerCase();
+          const spenderInfo: SpenderInfo = spenderNameMap.get(spenderLower) ?? {
+            address: d.spenderAddress,
+            name: d.spenderAddress.slice(0, 10) + '…',
+            description: 'Discovered from approval history',
+          };
+
+          results.push({
+            id: `${d.tokenAddress.toLowerCase()}:${spenderLower}`,
+            token: tokenInfo,
+            spender: spenderInfo,
+            allowance: remaining,
+            status: 'idle',
+          });
+        }
+
+        const uniqueSpenders = [...new Map(results.map((r) => [r.spender.address.toLowerCase(), r.spender])).values()];
+        const summary: ScanSummary = {
+          tokenCount: uniqueTokenAddrs.length,
+          spenders: uniqueSpenders,
+          mode: 'known',
+        };
+
+        setEntries(results);
+        setScanErrors(errors);
+        setLastScan(summary);
+        setScanStatus(null);
+        setScanning(false);
+        persistScanResults(results, summary, network, walletAddress);
+        return;
+      }
+
+      // ── 'custom' tab: check known+custom tokens against custom spenders ──
       setScanStatus('Fetching token list…');
 
-      // 1. Discover candidate tokens — three sources merged together:
-      //    a) hardcoded + explorer API list (with known metadata)
-      //    b) all contracts ever deployed on-chain (block-scan, cached)
-      //    c) user-added custom tokens
       let knownTokens: TokenInfo[] = [];
       try {
         knownTokens = await discoverTokens(network);
@@ -224,23 +360,13 @@ export function useAllowances() {
         knownTokens = getKnownTokens(network);
       }
 
-      // Scan blocks for any contracts not in the known list.
-      // discoverDeployedContracts() is incremental + cached, so subsequent
-      // scans only fetch new blocks since the last run.
       let deployedAddresses: string[] = [];
       try {
-        deployedAddresses = await discoverDeployedContracts(
-          provider,
-          network,
-          setScanStatus,
-        );
+        deployedAddresses = await discoverDeployedContracts(provider, network, setScanStatus);
       } catch {
         // ignore — fall back to known list only
       }
 
-      // Build the full candidate list: known tokens (with metadata) + newly
-      // discovered deployed contracts (placeholders, metadata resolved later
-      // only if the user holds a balance).
       const knownAddrs = new Set(knownTokens.map((t) => t.address.toLowerCase()));
       const extraCustom = customTokens.filter((ct) => !knownAddrs.has(ct.address.toLowerCase()));
 
@@ -253,12 +379,8 @@ export function useAllowances() {
           decimals: 8,
         }));
 
-      // All addresses we'll probe with balanceOf:
-      //   known tokens + on-chain discovered + custom
       const allCandidates: TokenInfo[] = [...knownTokens, ...unknownDeployedTokens, ...extraCustom];
 
-      // 2. Filter to tokens the wallet actually holds (parallel balanceOf).
-      //    Non-OP20 contracts will simply reject — Promise.allSettled handles this.
       setScanStatus(`Checking wallet balances for ${allCandidates.length} token candidates…`);
       const balanceResults = await Promise.allSettled(
         allCandidates.map(async (token) => {
@@ -276,21 +398,18 @@ export function useAllowances() {
         )
         .map((r) => r.value.token);
 
-      // Always include custom tokens regardless of balance; only filter others
       const heldKnownOrDiscovered = heldCandidates.filter(
         (t) => !extraCustom.some((c) => c.address.toLowerCase() === t.address.toLowerCase()),
       );
       const tokens: TokenInfo[] = [...heldKnownOrDiscovered, ...extraCustom];
 
-      // 3. Determine spenders
-      const spenders: SpenderInfo[] =
-        scanMode === 'custom' ? customSpenders : getKnownSpenders(network);
+      const spenders: SpenderInfo[] = customSpenders;
 
       if (tokens.length === 0 && spenders.length === 0) {
         setScanStatus(null);
         setScanning(false);
         setScanError(
-          'No tokens or spenders found for this network. Use the token input below to add a contract address and try again.',
+          'No tokens or spenders found. Add a custom spender address below and try again.',
         );
         return;
       }
@@ -299,7 +418,7 @@ export function useAllowances() {
         setScanStatus(null);
         setScanning(false);
         setScanError(
-          'No tokens found in your wallet for this network. If you hold tokens not listed here, use the token input below to add them manually.',
+          'No tokens found in your wallet. Use the token input below to add a contract address.',
         );
         return;
       }
@@ -307,15 +426,10 @@ export function useAllowances() {
       if (spenders.length === 0) {
         setScanStatus(null);
         setScanning(false);
-        setScanError(
-          scanMode === 'custom'
-            ? 'No custom spenders added. Use the input below to add a spender address.'
-            : 'No spender contracts are configured for this network. Contact support or check back when mainnet spenders are available.',
-        );
+        setScanError('No custom spenders added. Use the input below to add a spender address.');
         return;
       }
 
-      // 4. Parallel scan: fetch metadata + check all spender allowances per token
       setScanStatus(
         `Scanning ${tokens.length} token${tokens.length !== 1 ? 's' : ''} against ${spenders.length} spender${spenders.length !== 1 ? 's' : ''}…`,
       );
@@ -325,7 +439,6 @@ export function useAllowances() {
           const contract = contractService.getTokenContract(token.address, provider, network);
           contract.setSender(userAddress);
 
-          // Refresh metadata in case custom token placeholder still has '???'
           let tokenInfo: TokenInfo = token;
           try {
             const meta = await contract.metadata();
@@ -339,7 +452,6 @@ export function useAllowances() {
             // keep existing info
           }
 
-          // Check all spenders for this token in parallel
           const spenderResults = await Promise.allSettled(
             spenders.map(async (spender) => {
               const spenderAddr = Address.fromString(spender.address);
@@ -352,17 +464,16 @@ export function useAllowances() {
         }),
       );
 
-      // 5. Collect entries + errors
       const results: AllowanceEntry[] = [];
       const errors: Array<{ address: string; name: string; error: string }> = [];
 
       for (const tokenResult of perTokenResults) {
         if (tokenResult.status === 'rejected') {
-          const errMsg =
-            tokenResult.reason instanceof Error
-              ? tokenResult.reason.message
-              : String(tokenResult.reason);
-          errors.push({ address: 'unknown', name: 'Unknown token', error: errMsg });
+          errors.push({
+            address: 'unknown',
+            name: 'Unknown token',
+            error: tokenResult.reason instanceof Error ? tokenResult.reason.message : String(tokenResult.reason),
+          });
           continue;
         }
 
@@ -370,14 +481,10 @@ export function useAllowances() {
 
         for (const spenderResult of spenderResults) {
           if (spenderResult.status === 'rejected') {
-            const errMsg =
-              spenderResult.reason instanceof Error
-                ? spenderResult.reason.message
-                : String(spenderResult.reason);
             errors.push({
               address: token.address,
               name: tokenInfo.symbol || tokenInfo.name,
-              error: errMsg,
+              error: spenderResult.reason instanceof Error ? spenderResult.reason.message : String(spenderResult.reason),
             });
             continue;
           }
@@ -395,15 +502,13 @@ export function useAllowances() {
         }
       }
 
-      const summary: ScanSummary = { tokenCount: tokens.length, spenders, mode: scanMode };
+      const summary: ScanSummary = { tokenCount: tokens.length, spenders, mode: 'custom' };
 
       setEntries(results);
       setScanErrors(errors);
       setLastScan(summary);
       setScanStatus(null);
       setScanning(false);
-
-      // Persist for instant restore on next session
       persistScanResults(results, summary, network, walletAddress);
     },
     [customTokens, customSpenders],
