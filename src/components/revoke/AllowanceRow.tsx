@@ -21,6 +21,7 @@ function shortAddr(addr: string): string {
 interface AllowanceRowProps {
   entry: AllowanceEntry;
   explorerUrl: string;
+  mempoolUrl: string;
   selected: boolean;
   onSelect: (id: string, checked: boolean) => void;
   onRevoke: (id: string) => void;
@@ -29,6 +30,7 @@ interface AllowanceRowProps {
 export function AllowanceRow({
   entry,
   explorerUrl,
+  mempoolUrl,
   selected,
   onSelect,
   onRevoke,
@@ -73,7 +75,7 @@ export function AllowanceRow({
           <span className="font-semibold text-gray-200">{spender.name}</span>
           <span className="text-xs text-gray-500">{spender.description}</span>
           <a
-            href={`${explorerUrl}/address/${spender.address}`}
+            href={`${explorerUrl}/accounts/${spender.address}`}
             target="_blank"
             rel="noreferrer"
             className="text-xs font-mono text-brand-400 hover:text-brand-300 transition-colors mt-0.5"
@@ -123,15 +125,27 @@ export function AllowanceRow({
               Revoked
             </span>
             {entry.txId && (
-              <a
-                href={`${explorerUrl}/tx/${entry.txId}`}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs font-mono text-brand-400 hover:text-brand-300 transition-colors"
-                title={entry.txId}
-              >
-                {entry.txId.slice(0, 10)}…{entry.txId.slice(-6)} ↗
-              </a>
+              <div className="flex items-center gap-2 mt-0.5">
+                <a
+                  href={`${explorerUrl}/transactions/${entry.txId}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-brand-400 hover:text-brand-300 transition-colors"
+                  title={entry.txId}
+                >
+                  OPScan ↗
+                </a>
+                <span className="text-gray-600 text-xs">·</span>
+                <a
+                  href={`${mempoolUrl}${entry.txId}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-gray-400 hover:text-gray-300 transition-colors"
+                  title={entry.txId}
+                >
+                  Mempool ↗
+                </a>
+              </div>
             )}
           </div>
         ) : status === 'error' ? (

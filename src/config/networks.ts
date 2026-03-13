@@ -26,7 +26,7 @@ export function getNetworkConfig(network: Network): NetworkConfig {
     return {
       name: 'Mainnet',
       rpcUrl: 'https://mainnet.opnet.org',
-      explorerUrl: 'https://explorer.opnet.org',
+      explorerUrl: 'https://opscan.org',
       mempoolUrl: 'https://mempool.space/tx/',
     };
   }
@@ -34,8 +34,8 @@ export function getNetworkConfig(network: Network): NetworkConfig {
     return {
       name: 'OPNet Testnet',
       rpcUrl: 'https://testnet.opnet.org',
-      explorerUrl: 'https://testnet.opnet.org',
-      mempoolUrl: 'https://testnet.opnet.org/tx/',
+      explorerUrl: 'https://opscan.org',
+      mempoolUrl: 'https://mempool.space/signet/tx/',
     };
   }
   if (isRegtest(network)) {
@@ -49,7 +49,7 @@ export function getNetworkConfig(network: Network): NetworkConfig {
   return {
     name: 'Unknown',
     rpcUrl: 'https://mainnet.opnet.org',
-    explorerUrl: 'https://explorer.opnet.org',
+    explorerUrl: 'https://opscan.org',
     mempoolUrl: 'https://mempool.space/tx/',
   };
 }

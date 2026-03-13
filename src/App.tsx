@@ -434,7 +434,8 @@ export default function App() {
               scanStatus={scanStatus}
               scanError={scanError}
               hasScan={lastScan !== null}
-              explorerUrl={networkConfig?.explorerUrl ?? 'https://explorer.opnet.org'}
+              explorerUrl={networkConfig?.explorerUrl ?? 'https://opscan.org'}
+              mempoolUrl={networkConfig?.mempoolUrl ?? 'https://mempool.space/tx/'}
               selectedIds={selectedIds}
               onSelect={handleSelect}
               onSelectAll={handleSelectAll}
