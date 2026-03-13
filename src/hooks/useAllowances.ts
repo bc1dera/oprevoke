@@ -4,7 +4,7 @@ import type { AbstractRpcProvider } from 'opnet';
 import type { Network } from '@btc-vision/bitcoin';
 import { getKnownSpenders, getKnownTokens } from '../config/contracts.js';
 import { isMainnet, isTestnet } from '../config/networks.js';
-import { discoverTokens } from '../services/TokenDiscovery.js';
+import { discoverDeployedContracts, discoverTokens } from '../services/TokenDiscovery.js';
 import { contractService } from '../services/ContractService.js';
 import type { AllowanceEntry, SpenderInfo, TokenInfo } from '../types/index.js';
 
@@ -213,7 +213,10 @@ export function useAllowances() {
       setScanErrors([]);
       setScanStatus('Fetching token list…');
 
-      // 1. Discover candidate tokens
+      // 1. Discover candidate tokens — three sources merged together:
+      //    a) hardcoded + explorer API list (with known metadata)
+      //    b) all contracts ever deployed on-chain (block-scan, cached)
+      //    c) user-added custom tokens
       let knownTokens: TokenInfo[] = [];
       try {
         knownTokens = await discoverTokens(network);
@@ -221,14 +224,44 @@ export function useAllowances() {
         knownTokens = getKnownTokens(network);
       }
 
-      // Merge with user-added custom tokens (avoid duplicates)
+      // Scan blocks for any contracts not in the known list.
+      // discoverDeployedContracts() is incremental + cached, so subsequent
+      // scans only fetch new blocks since the last run.
+      let deployedAddresses: string[] = [];
+      try {
+        deployedAddresses = await discoverDeployedContracts(
+          provider,
+          network,
+          setScanStatus,
+        );
+      } catch {
+        // ignore — fall back to known list only
+      }
+
+      // Build the full candidate list: known tokens (with metadata) + newly
+      // discovered deployed contracts (placeholders, metadata resolved later
+      // only if the user holds a balance).
       const knownAddrs = new Set(knownTokens.map((t) => t.address.toLowerCase()));
       const extraCustom = customTokens.filter((ct) => !knownAddrs.has(ct.address.toLowerCase()));
 
-      // 2. Filter known tokens to those the wallet actually holds (parallel balanceOf)
-      setScanStatus(`Checking wallet balances for ${knownTokens.length} known tokens…`);
+      const unknownDeployedTokens: TokenInfo[] = deployedAddresses
+        .filter((addr) => !knownAddrs.has(addr.toLowerCase()))
+        .map((addr) => ({
+          address: addr,
+          name: addr.slice(0, 10) + '…',
+          symbol: '???',
+          decimals: 8,
+        }));
+
+      // All addresses we'll probe with balanceOf:
+      //   known tokens + on-chain discovered + custom
+      const allCandidates: TokenInfo[] = [...knownTokens, ...unknownDeployedTokens, ...extraCustom];
+
+      // 2. Filter to tokens the wallet actually holds (parallel balanceOf).
+      //    Non-OP20 contracts will simply reject — Promise.allSettled handles this.
+      setScanStatus(`Checking wallet balances for ${allCandidates.length} token candidates…`);
       const balanceResults = await Promise.allSettled(
-        knownTokens.map(async (token) => {
+        allCandidates.map(async (token) => {
           const contract = contractService.getTokenContract(token.address, provider, network);
           contract.setSender(userAddress);
           const res = await contract.balanceOf(userAddress);
@@ -236,15 +269,18 @@ export function useAllowances() {
         }),
       );
 
-      const heldKnownTokens = balanceResults
+      const heldCandidates = balanceResults
         .filter(
           (r): r is PromiseFulfilledResult<{ token: TokenInfo; held: boolean }> =>
             r.status === 'fulfilled' && r.value.held,
         )
         .map((r) => r.value.token);
 
-      // Always include custom tokens regardless of balance; only filter known ones
-      const tokens: TokenInfo[] = [...heldKnownTokens, ...extraCustom];
+      // Always include custom tokens regardless of balance; only filter others
+      const heldKnownOrDiscovered = heldCandidates.filter(
+        (t) => !extraCustom.some((c) => c.address.toLowerCase() === t.address.toLowerCase()),
+      );
+      const tokens: TokenInfo[] = [...heldKnownOrDiscovered, ...extraCustom];
 
       // 3. Determine spenders
       const spenders: SpenderInfo[] =
