@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
+import { WalletNetworks } from '@btc-vision/transaction';
 import type { Network } from '@btc-vision/bitcoin';
 import { contractService } from './services/ContractService.js';
-import { getNetworkConfig } from './config/networks.js';
+import { getNetworkConfig, isMainnet } from './config/networks.js';
 import { useAllowances } from './hooks/useAllowances.js';
 import { useRevoke } from './hooks/useRevoke.js';
 import { useTheme } from './hooks/useTheme.js';
@@ -13,7 +14,21 @@ import { AllowanceTable } from './components/revoke/AllowanceTable.js';
 import { Button } from './components/common/Button.js';
 
 export default function App() {
-  const { address, walletAddress, provider, network } = useWalletConnect();
+  const { address, walletAddress, walletInstance, provider, network } = useWalletConnect();
+  const [switchingNetwork, setSwitchingNetwork] = useState(false);
+
+  const handleSwitchNetwork = useCallback(async () => {
+    if (!walletInstance || !network || switchingNetwork) return;
+    const target = isMainnet(network) ? WalletNetworks.OpnetTestnet : WalletNetworks.Mainnet;
+    setSwitchingNetwork(true);
+    try {
+      await walletInstance.switchNetwork(target);
+    } catch {
+      // user dismissed or wallet rejected — ignore
+    } finally {
+      setSwitchingNetwork(false);
+    }
+  }, [walletInstance, network, switchingNetwork]);
   const isConnectedAndReady = !!walletAddress && !!address && !!provider && !!network;
   const { theme, toggle: toggleTheme } = useTheme();
 
@@ -38,6 +53,7 @@ export default function App() {
     removeCustomSpender,
     scan,
     updateEntryStatus,
+    restoreFromCache,
   } = useAllowances();
 
   const { revoke } = useRevoke();
@@ -51,11 +67,44 @@ export default function App() {
     prevNetworkRef.current = network;
   }, [network]);
 
+  // Work around a stale-closure bug in @btc-vision/walletconnect: the library
+  // registers its chainChanged hook before setSelectedWallet fires, so the
+  // captured selectedWallet is null and setNetwork() is never called when the
+  // user switches networks.  We attach our own listener directly on the raw
+  // walletInstance and reload — the library auto-reconnects on load with the
+  // correct network already set.
+  useEffect(() => {
+    if (!walletInstance) return;
+    const wi = walletInstance as unknown as {
+      on?: (event: string, fn: () => void) => void;
+      removeListener?: (event: string, fn: () => void) => void;
+    };
+    const handleChainChanged = () => {
+      window.location.reload();
+    };
+    wi.on?.('chainChanged', handleChainChanged);
+    return () => {
+      wi.removeListener?.('chainChanged', handleChainChanged);
+    };
+  }, [walletInstance]);
+
+  // Restore cached scan results when wallet connects
+  const didRestoreCacheRef = useRef(false);
+  useEffect(() => {
+    if (isConnectedAndReady && walletAddress && network && !didRestoreCacheRef.current) {
+      didRestoreCacheRef.current = true;
+      restoreFromCache(walletAddress, network);
+    }
+    if (!isConnectedAndReady) {
+      didRestoreCacheRef.current = false;
+    }
+  }, [isConnectedAndReady, walletAddress, network, restoreFromCache]);
+
   const handleScan = useCallback(() => {
-    if (!address || !provider || !network) return;
+    if (!address || !walletAddress || !provider || !network) return;
     setSelectedIds(new Set());
-    void scan(address, provider, network, activeTab);
-  }, [address, provider, network, scan, activeTab]);
+    void scan(address, walletAddress, provider, network, activeTab);
+  }, [address, walletAddress, provider, network, scan, activeTab]);
 
   const handleTabChange = useCallback((tab: 'known' | 'custom') => {
     setActiveTab(tab);
@@ -107,8 +156,7 @@ export default function App() {
           provider,
           network,
         );
-        console.info(`Bulk revoke tx: ${txId}`);
-        updateEntryStatus(entry.id, 'revoked');
+        updateEntryStatus(entry.id, 'revoked', undefined, txId);
         setSelectedIds((prev) => {
           const next = new Set(prev);
           next.delete(entry.id);
@@ -143,8 +191,7 @@ export default function App() {
           network,
         );
 
-        console.info(`Revoke tx submitted: ${txId}`);
-        updateEntryStatus(id, 'revoked');
+        updateEntryStatus(id, 'revoked', undefined, txId);
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
         updateEntryStatus(id, 'error', msg);
@@ -174,6 +221,32 @@ export default function App() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* Network switcher — only shown when wallet is connected */}
+            {isConnectedAndReady && network && (
+              <button
+                onClick={() => void handleSwitchNetwork()}
+                disabled={switchingNetwork}
+                title={`Switch to ${isMainnet(network) ? 'OPNet Testnet' : 'Mainnet'}`}
+                className="hidden sm:flex items-center gap-1.5 h-8 px-3 rounded-lg border border-surface-600 bg-surface-800 hover:bg-surface-700 hover:border-surface-500 text-xs font-medium text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    isMainnet(network) ? 'bg-orange-400' : 'bg-purple-400'
+                  }`}
+                />
+                {isMainnet(network) ? 'Mainnet' : 'Testnet'}
+                {switchingNetwork ? (
+                  <svg className="animate-spin h-3 w-3 ml-0.5 text-gray-400" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3 ml-0.5 text-gray-500">
+                    <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </button>
+            )}
             <button
               onClick={toggleTheme}
               aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}

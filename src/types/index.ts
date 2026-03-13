@@ -22,4 +22,6 @@ export interface AllowanceEntry {
   allowance: bigint;
   status: AllowanceStatus;
   errorMessage?: string;
+  /** Transaction ID after a successful revoke */
+  txId?: string;
 }
