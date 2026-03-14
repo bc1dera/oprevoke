@@ -261,7 +261,7 @@ export default function App() {
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
                   ) : (
-                    <span className={`h-2 w-2 rounded-full ${isMainnet(network) ? 'bg-green-400' : 'bg-orange-400'}`} />
+                    <span className={`h-2 w-2 rounded-full ${isMainnet(network) ? 'bg-orange-400' : 'bg-green-400'}`} />
                   )}
                   {isMainnet(network) ? 'Mainnet' : 'Testnet'}
                   <svg viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3 text-gray-500">
@@ -276,8 +276,8 @@ export default function App() {
                     className="absolute right-0 mt-1.5 w-36 rounded-lg border border-surface-600 bg-surface-800 shadow-lg py-1 z-50"
                   >
                     {([
-                      { label: 'Mainnet', value: WalletNetworks.Mainnet, dot: 'bg-green-400' },
-                      { label: 'Testnet', value: WalletNetworks.OpnetTestnet, dot: 'bg-orange-400' },
+                      { label: 'Mainnet', value: WalletNetworks.Mainnet, dot: 'bg-orange-400' },
+                      { label: 'Testnet', value: WalletNetworks.OpnetTestnet, dot: 'bg-green-400' },
                     ] as const).map(({ label, value, dot }) => {
                       const active =
                         value === WalletNetworks.Mainnet ? isMainnet(network) : !isMainnet(network);
