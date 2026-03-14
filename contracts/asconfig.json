@@ -1,0 +1,29 @@
+{
+  "targets": {
+    "release": {
+      "outFile": "build/BatchRevoke.wasm",
+      "textFile": "build/BatchRevoke.wat",
+      "sourceMap": false,
+      "optimize": true,
+      "optimizeLevel": 3,
+      "shrinkLevel": 2,
+      "noAssert": true,
+      "runtime": "stub"
+    },
+    "debug": {
+      "outFile": "build/BatchRevoke.debug.wasm",
+      "textFile": "build/BatchRevoke.debug.wat",
+      "sourceMap": true,
+      "debug": true,
+      "runtime": "stub"
+    }
+  },
+  "options": {
+    "bindings": "raw",
+    "importMemory": true,
+    "initialMemory": 10,
+    "maximumMemory": 128,
+    "exportRuntime": false,
+    "use": "abort="
+  }
+}
