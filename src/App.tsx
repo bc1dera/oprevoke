@@ -401,6 +401,52 @@ export default function App() {
                   title: 'One-Click Revoke',
                   body: 'Revoke suspicious approvals directly from the extension popup.',
                 },
+                {
+                  icon: (
+                    <svg viewBox="0 0 24 24" className="h-5 w-5 text-brand-400" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  ),
+                  title: 'Transaction Simulation',
+                  body: 'Simulates transactions before you sign, flagging malicious outcomes before they happen.',
+                },
+                {
+                  icon: (
+                    <svg viewBox="0 0 24 24" className="h-5 w-5 text-brand-400" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  ),
+                  title: 'Address Poisoning Detection',
+                  body: 'Continuously scans your wallet for lookalike addresses planted to trick you into sending funds to an attacker.',
+                },
+                {
+                  icon: (
+                    <svg viewBox="0 0 24 24" className="h-5 w-5 text-brand-400" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  ),
+                  title: 'Phishing Site Alerts',
+                  body: 'Warns you instantly when you navigate to a known phishing site before you connect your wallet.',
+                },
+                {
+                  icon: (
+                    <svg viewBox="0 0 24 24" className="h-5 w-5 text-brand-400" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                    </svg>
+                  ),
+                  title: 'Malicious Token Detection',
+                  body: 'Detects drainer tokens in your wallet designed to steal funds when you attempt to swap them.',
+                },
+                {
+                  icon: (
+                    <svg viewBox="0 0 24 24" className="h-5 w-5 text-brand-400" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  ),
+                  title: 'Honeypot Token Warning',
+                  body: 'Flags tokens that cannot be sold before you swap into them, preventing you from getting trapped.',
+                },
               ].map((card) => (
                 <div key={card.title} className="rounded-xl border border-surface-600 bg-surface-800 p-4">
                   <div className="mb-2">{card.icon}</div>
@@ -409,6 +455,7 @@ export default function App() {
                 </div>
               ))}
             </div>
+            <p className="text-xs text-gray-600 mt-4">And much more coming at launch.</p>
           </div>
         ) : !isConnectedAndReady ? (
           /* Not connected */
