@@ -8,8 +8,8 @@
     "typecheck": "asc assembly/index.ts --noEmit"
   },
   "dependencies": {
-    "@btc-vision/as-bignum": "latest",
-    "@btc-vision/btc-runtime": "latest"
+    "@btc-vision/as-bignum": "^0.1.2",
+    "@btc-vision/btc-runtime": "1.11.0-rc.10"
   },
   "devDependencies": {
     "@btc-vision/opnet-transform": "latest",

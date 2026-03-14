@@ -1,4 +1,4 @@
-import { Address, AddressMap } from '@btc-vision/transaction';
+import { Address, AddressMap, ExtendedAddressMap, SchnorrSignature } from '@btc-vision/transaction';
 import { CallResult, OPNetEvent, IOP_NETContract } from 'opnet';
 
 // ------------------------------------------------------------------

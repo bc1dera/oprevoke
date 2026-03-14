@@ -3,6 +3,8 @@
         {
             "name": "name",
             "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
             "inputs": [],
             "outputs": [
                 {
@@ -14,6 +16,8 @@
         {
             "name": "symbol",
             "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
             "inputs": [],
             "outputs": [
                 {
@@ -25,6 +29,8 @@
         {
             "name": "maxSupply",
             "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
             "inputs": [],
             "outputs": [
                 {
@@ -36,6 +42,8 @@
         {
             "name": "collectionInfo",
             "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
             "inputs": [],
             "outputs": [
                 {
@@ -59,6 +67,8 @@
         {
             "name": "tokenURI",
             "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
             "inputs": [
                 {
                     "name": "tokenId",
@@ -75,12 +85,16 @@
         {
             "name": "changeMetadata",
             "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
             "inputs": [],
             "outputs": []
         },
         {
             "name": "totalSupply",
             "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
             "inputs": [],
             "outputs": [
                 {
@@ -92,6 +106,8 @@
         {
             "name": "balanceOf",
             "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
             "inputs": [
                 {
                     "name": "owner",
@@ -108,6 +124,8 @@
         {
             "name": "ownerOf",
             "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
             "inputs": [
                 {
                     "name": "tokenId",
@@ -122,8 +140,48 @@
             ]
         },
         {
+            "name": "transfer",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "to",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "tokenId",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "transferFrom",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "from",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "to",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "tokenId",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": []
+        },
+        {
             "name": "safeTransfer",
             "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
             "inputs": [
                 {
                     "name": "to",
@@ -143,6 +201,8 @@
         {
             "name": "safeTransferFrom",
             "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
             "inputs": [
                 {
                     "name": "from",
@@ -166,6 +226,8 @@
         {
             "name": "approve",
             "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
             "inputs": [
                 {
                     "name": "operator",
@@ -181,6 +243,8 @@
         {
             "name": "getApproved",
             "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
             "inputs": [
                 {
                     "name": "tokenId",
@@ -192,6 +256,8 @@
         {
             "name": "setApprovalForAll",
             "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
             "inputs": [
                 {
                     "name": "operator",
@@ -207,6 +273,8 @@
         {
             "name": "isApprovedForAll",
             "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
             "inputs": [
                 {
                     "name": "owner",
@@ -227,6 +295,8 @@
         {
             "name": "approveBySignature",
             "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
             "inputs": [
                 {
                     "name": "owner",
@@ -258,6 +328,8 @@
         {
             "name": "setApprovalForAllBySignature",
             "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
             "inputs": [
                 {
                     "name": "owner",
@@ -289,6 +361,8 @@
         {
             "name": "burn",
             "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
             "inputs": [
                 {
                     "name": "tokenId",
@@ -300,6 +374,8 @@
         {
             "name": "domainSeparator",
             "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
             "inputs": [],
             "outputs": [
                 {
@@ -311,6 +387,8 @@
         {
             "name": "tokenOfOwnerByIndex",
             "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
             "inputs": [
                 {
                     "name": "owner",
@@ -331,6 +409,8 @@
         {
             "name": "getApproveNonce",
             "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
             "inputs": [
                 {
                     "name": "owner",
@@ -347,6 +427,8 @@
         {
             "name": "setBaseURI",
             "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
             "inputs": [
                 {
                     "name": "baseURI",
@@ -358,6 +440,8 @@
         {
             "name": "metadata",
             "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
             "inputs": [],
             "outputs": [
                 {
