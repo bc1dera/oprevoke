@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "OPNet BatchRevoke smart contract — revoke multiple OP_20 allowances in one transaction",
   "scripts": {
-    "build": "asc assembly/index.ts --target release --outFile build/BatchRevoke.wasm --textFile build/BatchRevoke.wat --optimize --noAssert --runtime stub",
-    "build:debug": "asc assembly/index.ts --target debug --outFile build/BatchRevoke.debug.wasm --textFile build/BatchRevoke.debug.wat --runtime stub",
+    "build": "asc assembly/index.ts --target release",
+    "build:debug": "asc assembly/index.ts --target debug",
     "typecheck": "asc assembly/index.ts --noEmit"
   },
   "dependencies": {
@@ -12,6 +12,7 @@
     "@btc-vision/btc-runtime": "latest"
   },
   "devDependencies": {
+    "@btc-vision/opnet-transform": "latest",
     "assemblyscript": "latest"
   }
 }

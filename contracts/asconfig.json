@@ -3,26 +3,36 @@
     "release": {
       "outFile": "build/BatchRevoke.wasm",
       "textFile": "build/BatchRevoke.wat",
-      "sourceMap": false,
-      "optimize": true,
-      "optimizeLevel": 3,
-      "shrinkLevel": 2,
-      "noAssert": true,
-      "runtime": "stub"
+      "sourceMap": false
     },
     "debug": {
       "outFile": "build/BatchRevoke.debug.wasm",
       "textFile": "build/BatchRevoke.debug.wat",
       "sourceMap": true,
-      "debug": true,
-      "runtime": "stub"
+      "debug": true
     }
   },
   "options": {
-    "bindings": "raw",
-    "initialMemory": 10,
-    "maximumMemory": 128,
-    "exportRuntime": false,
-    "use": "abort="
+    "optimizeLevel": 3,
+    "shrinkLevel": 1,
+    "converge": true,
+    "noAssert": false,
+    "runtime": "stub",
+    "memoryBase": 0,
+    "initialMemory": 1,
+    "exportStart": "start",
+    "enable": [
+      "sign-extension",
+      "mutable-globals",
+      "nontrapping-f2i",
+      "bulk-memory",
+      "simd",
+      "reference-types",
+      "multi-value"
+    ],
+    "use": [
+      "abort=assembly/index/abort"
+    ],
+    "transform": "@btc-vision/opnet-transform"
   }
 }
