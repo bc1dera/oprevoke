@@ -50,6 +50,7 @@ export default function App() {
   const isConnectedAndReady = !!walletAddress && !!address && !!provider && !!network;
   const { theme, toggle: toggleTheme } = useTheme();
 
+  const [activePage, setActivePage] = useState<'revoke' | 'shield'>('revoke');
   const [activeTab, setActiveTab] = useState<'known' | 'custom'>('known');
   const [showTokenInput, setShowTokenInput] = useState(false);
   const [showSpenderInput, setShowSpenderInput] = useState(false);
@@ -328,7 +329,88 @@ export default function App() {
 
       {/* Main */}
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-8 space-y-6">
-        {!isConnectedAndReady ? (
+        {/* Top-level page navigation */}
+        <div className="flex gap-1 p-1 rounded-xl bg-surface-800 border border-surface-600 w-fit">
+          {([
+            { id: 'revoke', label: 'Revoke' },
+            { id: 'shield', label: 'Shield Extension', badge: 'Soon' },
+          ] as const).map((page) => (
+            <button
+              key={page.id}
+              onClick={() => setActivePage(page.id)}
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                activePage === page.id
+                  ? 'bg-brand-500 text-white shadow-sm'
+                  : 'text-gray-400 hover:text-gray-200'
+              }`}
+            >
+              {page.label}
+              {'badge' in page && (
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 leading-none">
+                  {page.badge}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {activePage === 'shield' ? (
+          /* Shield Extension coming soon */
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="h-20 w-20 rounded-2xl bg-surface-700 border border-surface-600 flex items-center justify-center mb-6">
+              <svg viewBox="0 0 24 24" className="h-10 w-10 text-brand-400" fill="currentColor">
+                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
+              </svg>
+            </div>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs font-semibold mb-4">
+              <span className="h-1.5 w-1.5 rounded-full bg-yellow-400 animate-pulse" />
+              Coming Soon
+            </span>
+            <h2 className="text-2xl font-bold text-gray-100 mb-3">OPRevoke Shield Extension</h2>
+            <p className="text-gray-400 text-sm max-w-md mb-8">
+              A browser extension that monitors your OP20 approvals in real time and alerts you
+              before you sign risky transactions — protecting your wallet automatically.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl text-left">
+              {[
+                {
+                  icon: (
+                    <svg viewBox="0 0 24 24" className="h-5 w-5 text-brand-400" fill="currentColor">
+                      <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l5 2.18V11c0 3.5-2.33 6.79-5 7.93-2.67-1.14-5-4.43-5-7.93V7.18L12 5z" />
+                    </svg>
+                  ),
+                  title: 'Real-Time Alerts',
+                  body: 'Get warned instantly when a dApp requests an unlimited approval.',
+                },
+                {
+                  icon: (
+                    <svg viewBox="0 0 24 24" className="h-5 w-5 text-brand-400" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  ),
+                  title: 'Approval Monitor',
+                  body: 'Continuously tracks active allowances in the background.',
+                },
+                {
+                  icon: (
+                    <svg viewBox="0 0 24 24" className="h-5 w-5 text-brand-400" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  ),
+                  title: 'One-Click Revoke',
+                  body: 'Revoke suspicious approvals directly from the extension popup.',
+                },
+              ].map((card) => (
+                <div key={card.title} className="rounded-xl border border-surface-600 bg-surface-800 p-4">
+                  <div className="mb-2">{card.icon}</div>
+                  <h3 className="font-semibold text-gray-200 text-sm mb-1">{card.title}</h3>
+                  <p className="text-xs text-gray-500">{card.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : !isConnectedAndReady ? (
           /* Not connected */
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="h-16 w-16 rounded-2xl bg-surface-700 border border-surface-600 flex items-center justify-center mb-6">
