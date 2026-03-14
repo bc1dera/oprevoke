@@ -131,7 +131,7 @@ export function AllowanceRow({
                   target="_blank"
                   rel="noreferrer"
                   title={entry.txId}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium text-white bg-[#0d0f1e] border border-purple-700/60 hover:border-purple-500 hover:bg-purple-950/40 transition-colors"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium text-brand-400 bg-brand-500/10 border border-brand-500/30 hover:border-brand-400/60 hover:bg-brand-500/20 transition-colors"
                 >
                   Mempool
                   <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
@@ -141,7 +141,7 @@ export function AllowanceRow({
                   target="_blank"
                   rel="noreferrer"
                   title={entry.txId}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium text-white bg-[#0d0f1e] border border-purple-700/60 hover:border-purple-500 hover:bg-purple-950/40 transition-colors"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium text-brand-400 bg-brand-500/10 border border-brand-500/30 hover:border-brand-400/60 hover:bg-brand-500/20 transition-colors"
                 >
                   OP_SCAN
                   <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>

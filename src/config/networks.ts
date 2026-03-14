@@ -35,7 +35,7 @@ export function getNetworkConfig(network: Network): NetworkConfig {
       name: 'OPNet Testnet',
       rpcUrl: 'https://testnet.opnet.org',
       explorerUrl: 'https://opscan.org',
-      mempoolUrl: 'https://mempool.space/signet/tx/',
+      mempoolUrl: 'https://mempool.opnet.org/testnet/tx/',
     };
   }
   if (isRegtest(network)) {
