@@ -1,10 +1,17 @@
 import { useCallback } from 'react';
-import { Address } from '@btc-vision/transaction';
+import { Address, SignatureType } from '@btc-vision/transaction';
 import { fromBech32 } from '@btc-vision/bitcoin';
 import type { AbstractRpcProvider } from 'opnet';
 import type { UTXO } from 'opnet';
 import type { Network } from '@btc-vision/bitcoin';
+import type { Unisat } from '@btc-vision/transaction';
 import { contractService } from '../services/ContractService.js';
+import { getBatchRevokeContract } from '../config/contracts.js';
+import { buildPermitHash } from '../utils/op712.js';
+import {
+  encodeBatchRevokeCalldata,
+  type BatchRevokeEntry as BatchRevokeCalldataEntry,
+} from '../utils/batchRevokeCalldata.js';
 
 export interface BatchRevokeEntry {
   id: string;
@@ -133,5 +140,131 @@ export function useRevoke() {
     [],
   );
 
-  return { revoke, batchRevoke };
+  /**
+   * Revokes multiple OP20 allowances in a SINGLE Bitcoin transaction using the
+   * deployed BatchRevoke contract and permit-based signatures (OP-712).
+   *
+   * Flow per entry:
+   *   1. Fetch domainSeparator and nonceOf from the OP20 token.
+   *   2. Build the OP-712 permit hash (sha256-based, not keccak256).
+   *   3. Sign it via walletInstance.signData (Schnorr).
+   *   4. Bundle all signed entries into one batchRevoke calldata.
+   *   5. Simulate via provider.call, then sendTransaction — one Bitcoin tx.
+   *
+   * Falls back to regular batchRevoke (UTXO-chain) if no BatchRevoke contract
+   * is deployed on the current network.
+   */
+  const contractBatchRevoke = useCallback(
+    async (
+      entries: BatchRevokeEntry[],
+      refundTo: string,
+      userAddress: Address,
+      provider: AbstractRpcProvider,
+      network: Network,
+      walletInstance: Unisat,
+      onSuccess: (ids: string[], txId: string) => void,
+      onError: (ids: string[], message: string) => void,
+    ): Promise<void> => {
+      const batchRevokeAddr = getBatchRevokeContract(network);
+      if (!batchRevokeAddr) {
+        throw new Error('BatchRevoke contract not deployed on this network');
+      }
+
+      const ids: string[] = entries.map((e) => e.id);
+
+      try {
+        // Current block used to compute deadline (block number + buffer).
+        const currentBlock = await provider.getBlockNumber();
+        // Give 30 blocks (~5 min at ~10s/block) for the tx to confirm.
+        const deadline = currentBlock + 30n;
+
+        // 32-byte owner bytes (SHA256 of MLDSA public key = OPNet address content).
+        const ownerAddrBytes = userAddress.toBuffer();
+        // 32-byte tweaked x-only public key (for signature verification in OP20).
+        const tweakedKeyBytes = userAddress.tweakedPublicKeyToBuffer();
+
+        const calldataEntries: BatchRevokeCalldataEntry[] = [];
+
+        for (const entry of entries) {
+          const { tokenAddress, spenderAddress, currentAllowance } = entry;
+
+          const contract = contractService.getTokenContract(tokenAddress, provider, network);
+
+          // Fetch domain separator and owner nonce in parallel.
+          const [dsResult, nonceResult] = await Promise.all([
+            contract.domainSeparator(),
+            contract.nonceOf(userAddress),
+          ]);
+
+          if (dsResult.revert) throw new Error(`domainSeparator reverted: ${dsResult.revert}`);
+          if (nonceResult.revert) throw new Error(`nonceOf reverted: ${nonceResult.revert}`);
+
+          const domainSeparator = dsResult.properties.domainSeparator;
+          const nonce = nonceResult.properties.nonce;
+
+          const spenderAddr = parseSpender(spenderAddress);
+          const spenderBytes = spenderAddr.toBuffer();
+          const tokenBytes = parseSpender(tokenAddress).toBuffer();
+
+          // Build OP-712 permit hash.
+          const msgHash = buildPermitHash(
+            domainSeparator,
+            ownerAddrBytes,
+            spenderBytes,
+            currentAllowance,
+            nonce,
+            deadline,
+          );
+
+          // Sign with Schnorr — walletInstance.signData takes hex string, returns hex sig.
+          const msgHex = Buffer.from(msgHash).toString('hex');
+          const sigHex = await walletInstance.signData(msgHex, SignatureType.schnorr);
+          const signature = Uint8Array.from(Buffer.from(sigHex, 'hex'));
+
+          calldataEntries.push({
+            token: tokenBytes,
+            ownerAddr: ownerAddrBytes,
+            tweakedKey: tweakedKeyBytes,
+            spender: spenderBytes,
+            amount: currentAllowance,
+            deadline,
+            signature,
+          });
+        }
+
+        // Encode the batchRevoke calldata.
+        const calldata = encodeBatchRevokeCalldata(calldataEntries);
+
+        // Simulate via provider.call.
+        const callResult = await provider.call(batchRevokeAddr, calldata, userAddress);
+
+        // Check for RPC-level error (ICallRequestError has an `error` field).
+        if ('error' in callResult) {
+          throw new Error(`BatchRevoke simulation failed: ${callResult.error}`);
+        }
+
+        if (callResult.revert) {
+          throw new Error(`BatchRevoke simulation reverted: ${callResult.revert}`);
+        }
+
+        // Send the single transaction.
+        const receipt = await callResult.sendTransaction({
+          signer: null,
+          mldsaSigner: null,
+          refundTo,
+          feeRate: 10,
+          network,
+          maximumAllowedSatToSpend: 10000n,
+        });
+
+        onSuccess(ids, receipt.transactionId);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Unknown error';
+        onError(ids, msg);
+      }
+    },
+    [],
+  );
+
+  return { revoke, batchRevoke, contractBatchRevoke };
 }
