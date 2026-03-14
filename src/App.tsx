@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useMemo, useId } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
-import { WalletNetworks } from '@btc-vision/transaction';
+import { WalletNetworks, Address } from '@btc-vision/transaction';
 import type { Network } from '@btc-vision/bitcoin';
 import { contractService } from './services/ContractService.js';
 import { getNetworkConfig, isMainnet } from './config/networks.js';
@@ -15,7 +15,16 @@ import { AllowanceTable } from './components/revoke/AllowanceTable.js';
 import { Button } from './components/common/Button.js';
 
 export default function App() {
-  const { address, walletAddress, walletInstance, provider, network } = useWalletConnect();
+  const { address, walletAddress, walletInstance, provider, network, mldsaPublicKey, publicKey } = useWalletConnect();
+
+  // Reconstruct address with both keys when available.
+  // The wallet may build Address with only mldsaPublicKey (no Schnorr key yet), leaving
+  // tweakedPublicKeyToBuffer() undefined — which causes 'invalid ml-dsa public key' in
+  // contractBatchRevoke. Re-derive with both keys whenever possible.
+  const fullAddress = useMemo(() => {
+    if (mldsaPublicKey && publicKey) return Address.fromString(mldsaPublicKey, publicKey);
+    return address;
+  }, [mldsaPublicKey, publicKey, address]);
   const [switchingNetwork, setSwitchingNetwork] = useState(false);
   const [networkMenuOpen, setNetworkMenuOpen] = useState(false);
   const networkMenuRef = useRef<HTMLDivElement>(null);
@@ -48,7 +57,7 @@ export default function App() {
       setSwitchingNetwork(false);
     }
   }, [walletInstance, network, switchingNetwork]);
-  const isConnectedAndReady = !!walletAddress && !!address && !!provider && !!network;
+  const isConnectedAndReady = !!walletAddress && !!fullAddress && !!provider && !!network;
   const { theme, toggle: toggleTheme } = useTheme();
 
   const [activePage, setActivePage] = useState<'revoke' | 'shield'>('revoke');
@@ -121,10 +130,10 @@ export default function App() {
   }, [isConnectedAndReady, walletAddress, network, restoreFromCache]);
 
   const handleScan = useCallback(() => {
-    if (!address || !walletAddress || !provider || !network) return;
+    if (!fullAddress || !walletAddress || !provider || !network) return;
     setSelectedIds(new Set());
-    void scan(address, walletAddress, provider, network, activeTab);
-  }, [address, walletAddress, provider, network, scan, activeTab]);
+    void scan(fullAddress, walletAddress, provider, network, activeTab);
+  }, [fullAddress, walletAddress, provider, network, scan, activeTab]);
 
   const handleTabChange = useCallback((tab: 'known' | 'custom') => {
     setActiveTab(tab);
@@ -155,7 +164,7 @@ export default function App() {
   );
 
   const handleRevokeSelected = useCallback(async () => {
-    if (!provider || !network || !walletAddress || !address || bulkRevoking) return;
+    if (!provider || !network || !walletAddress || !fullAddress || bulkRevoking) return;
 
     const toRevoke = entries.filter(
       (e) => selectedIds.has(e.id) && e.status !== 'revoked' && e.status !== 'revoking',
@@ -185,7 +194,7 @@ export default function App() {
         await contractBatchRevoke(
           revokeEntries,
           walletAddress,
-          address,
+          fullAddress,
           provider,
           network,
           walletInstance,
@@ -208,7 +217,7 @@ export default function App() {
         await batchRevoke(
           revokeEntries,
           walletAddress,
-          address,
+          fullAddress,
           provider,
           network,
           (id, txId) => {
@@ -227,11 +236,11 @@ export default function App() {
     } finally {
       setBulkRevoking(false);
     }
-  }, [entries, selectedIds, provider, network, walletAddress, address, walletInstance, bulkRevoking, batchRevoke, contractBatchRevoke, updateEntryStatus]);
+  }, [entries, selectedIds, provider, network, walletAddress, fullAddress, walletInstance, bulkRevoking, batchRevoke, contractBatchRevoke, updateEntryStatus]);
 
   const handleRevoke = useCallback(
     async (id: string) => {
-      if (!provider || !network || !walletAddress || !address) return;
+      if (!provider || !network || !walletAddress || !fullAddress) return;
 
       const entry = entries.find((e) => e.id === id);
       if (!entry) return;
@@ -244,7 +253,7 @@ export default function App() {
           entry.spender.address,
           entry.allowance,
           walletAddress,
-          address,
+          fullAddress,
           provider,
           network,
         );
