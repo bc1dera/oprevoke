@@ -75,6 +75,13 @@ const TESTNET_SPENDERS: SpenderInfo[] = [
 const REGTEST_TOKENS: TokenInfo[] = [];
 const REGTEST_SPENDERS: SpenderInfo[] = [];
 
+// ─── BatchRevoke contract addresses ──────────────────────────────────────────
+// Deployed WASM: contracts/build/BatchRevoke.wasm
+// Revokes multiple OP_20 allowances in one tx via decreaseAllowanceBySignature.
+
+const BATCH_REVOKE_TESTNET = 'opt1sqr90v7nt3gzs4avla32fvgwu4hac7e9eac5zt8wp';
+const BATCH_REVOKE_MAINNET: string | null = null; // not yet deployed on mainnet
+
 // ─── Exports ─────────────────────────────────────────────────────────────────
 
 export function getKnownTokens(network: Network): TokenInfo[] {
@@ -87,4 +94,11 @@ export function getKnownSpenders(network: Network): SpenderInfo[] {
   if (isMainnet(network)) return MAINNET_SPENDERS;
   if (isTestnet(network)) return TESTNET_SPENDERS;
   return REGTEST_SPENDERS;
+}
+
+/** Returns the deployed BatchRevoke contract address for the given network, or null if not deployed. */
+export function getBatchRevokeContract(network: Network): string | null {
+  if (isMainnet(network)) return BATCH_REVOKE_MAINNET;
+  if (isTestnet(network)) return BATCH_REVOKE_TESTNET;
+  return null;
 }
