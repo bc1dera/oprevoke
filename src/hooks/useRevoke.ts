@@ -235,6 +235,11 @@ export function useRevoke() {
         // Encode the batchRevoke calldata.
         const calldata = encodeBatchRevokeCalldata(calldataEntries);
 
+        // provider.call() returns a bare CallResult that is missing the `calldata`,
+        // `to`, and `address` fields that sendTransaction() requires.
+        // We must set them manually before calling sendTransaction.
+        const batchRevokeAddrObj = parseSpender(batchRevokeAddr);
+
         // Simulate via provider.call.
         const callResult = await provider.call(batchRevokeAddr, calldata, userAddress);
 
@@ -246,6 +251,10 @@ export function useRevoke() {
         if (callResult.revert) {
           throw new Error(`BatchRevoke simulation reverted: ${callResult.revert}`);
         }
+
+        // Populate the fields that sendTransaction requires but provider.call doesn't set.
+        callResult.setCalldata(calldata);
+        callResult.setTo(batchRevokeAddr, batchRevokeAddrObj);
 
         // Send the single transaction.
         const receipt = await callResult.sendTransaction({
