@@ -357,8 +357,8 @@ export default function App() {
         {activePage === 'shield' ? (
           /* Shield Extension coming soon */
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="h-20 w-20 rounded-2xl bg-surface-700 border border-surface-600 flex items-center justify-center mb-6">
-              <svg viewBox="0 0 24 24" className="h-10 w-10 text-brand-400" fill="currentColor">
+            <div className="h-20 w-20 rounded-2xl bg-brand-500 flex items-center justify-center mb-6">
+              <svg viewBox="0 0 24 24" className="h-12 w-12 text-white" fill="currentColor">
                 <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l5 2.18V11c0 3.5-2.33 6.79-5 7.93-2.67-1.14-5-4.43-5-7.93V7.18L12 5zm-1 5v6h2v-6h-2z" />
               </svg>
             </div>
