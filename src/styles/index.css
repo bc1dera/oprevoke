@@ -12,11 +12,11 @@
 }
 
 html.light {
-  --surface-900: 255 255 255;  /* #ffffff */
-  --surface-800: 248 250 252;  /* slate-50 */
-  --surface-700: 241 245 249;  /* slate-100 */
-  --surface-600: 226 232 240;  /* slate-200 */
-  --surface-500: 203 213 225;  /* slate-300 */
+  --surface-900: 243 242 238;  /* #f3f2ee  warm off-white page bg */
+  --surface-800: 250 249 247;  /* #faf9f7  card / panel bg        */
+  --surface-700: 236 235 230;  /* #ecebc6  input / secondary bg   */
+  --surface-600: 220 219 213;  /* #dcdbd5  borders                */
+  --surface-500: 196 195 188;  /* #c4c3bc  muted / dividers       */
 }
 
 @layer base {
