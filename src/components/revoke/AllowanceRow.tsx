@@ -125,25 +125,26 @@ export function AllowanceRow({
               Revoked
             </span>
             {entry.txId && (
-              <div className="flex items-center gap-2 mt-0.5">
-                <a
-                  href={`${explorerUrl}/transactions/${entry.txId}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs text-brand-400 hover:text-brand-300 transition-colors"
-                  title={entry.txId}
-                >
-                  OPScan ↗
-                </a>
-                <span className="text-gray-600 text-xs">·</span>
+              <div className="flex items-center gap-1.5 mt-1">
                 <a
                   href={`${mempoolUrl}${entry.txId}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-xs text-gray-400 hover:text-gray-300 transition-colors"
                   title={entry.txId}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium text-white bg-[#0d0f1e] border border-purple-700/60 hover:border-purple-500 hover:bg-purple-950/40 transition-colors"
                 >
-                  Mempool ↗
+                  Mempool
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+                </a>
+                <a
+                  href={`${explorerUrl}/transactions/${entry.txId}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={entry.txId}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium text-white bg-[#0d0f1e] border border-purple-700/60 hover:border-purple-500 hover:bg-purple-950/40 transition-colors"
+                >
+                  OP_SCAN
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
                 </a>
               </div>
             )}
