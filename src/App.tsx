@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo, useId } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { WalletNetworks } from '@btc-vision/transaction';
 import type { Network } from '@btc-vision/bitcoin';
@@ -16,10 +16,28 @@ import { Button } from './components/common/Button.js';
 export default function App() {
   const { address, walletAddress, walletInstance, provider, network } = useWalletConnect();
   const [switchingNetwork, setSwitchingNetwork] = useState(false);
+  const [networkMenuOpen, setNetworkMenuOpen] = useState(false);
+  const networkMenuRef = useRef<HTMLDivElement>(null);
+  const networkMenuId = useId();
 
-  const handleSwitchNetwork = useCallback(async () => {
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (networkMenuRef.current && !networkMenuRef.current.contains(e.target as Node)) {
+        setNetworkMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSwitchNetwork = useCallback(async (target: WalletNetworks) => {
     if (!walletInstance || !network || switchingNetwork) return;
-    const target = isMainnet(network) ? WalletNetworks.OpnetTestnet : WalletNetworks.Mainnet;
+    setNetworkMenuOpen(false);
+    if (
+      (target === WalletNetworks.Mainnet && isMainnet(network)) ||
+      (target === WalletNetworks.OpnetTestnet && !isMainnet(network))
+    ) return; // already on that network
     setSwitchingNetwork(true);
     try {
       await walletInstance.switchNetwork(target);
@@ -226,31 +244,64 @@ export default function App() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Network switcher — only shown when wallet is connected */}
+            {/* Network switcher dropdown — only shown when wallet is connected */}
             {isConnectedAndReady && network && (
-              <button
-                onClick={() => void handleSwitchNetwork()}
-                disabled={switchingNetwork}
-                title={`Switch to ${isMainnet(network) ? 'OPNet Testnet' : 'Mainnet'}`}
-                className="hidden sm:flex items-center gap-1.5 h-8 px-3 rounded-lg border border-surface-600 bg-surface-800 hover:bg-surface-700 hover:border-surface-500 text-xs font-medium text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span
-                  className={`h-1.5 w-1.5 rounded-full ${
-                    isMainnet(network) ? 'bg-orange-400' : 'bg-purple-400'
-                  }`}
-                />
-                {isMainnet(network) ? 'Mainnet' : 'Testnet'}
-                {switchingNetwork ? (
-                  <svg className="animate-spin h-3 w-3 ml-0.5 text-gray-400" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              <div ref={networkMenuRef} className="relative hidden sm:block">
+                <button
+                  onClick={() => setNetworkMenuOpen(o => !o)}
+                  disabled={switchingNetwork}
+                  aria-haspopup="listbox"
+                  aria-expanded={networkMenuOpen}
+                  aria-controls={networkMenuId}
+                  className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-surface-600 bg-surface-800 hover:bg-surface-700 hover:border-surface-500 text-xs font-medium text-gray-300 hover:text-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {switchingNetwork ? (
+                    <svg className="animate-spin h-2.5 w-2.5 text-gray-400" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  ) : (
+                    <span className={`h-2 w-2 rounded-full ${isMainnet(network) ? 'bg-green-400' : 'bg-orange-400'}`} />
+                  )}
+                  {isMainnet(network) ? 'Mainnet' : 'Testnet'}
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3 text-gray-500">
+                    <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
                   </svg>
-                ) : (
-                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3 ml-0.5 text-gray-500">
-                    <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clipRule="evenodd" />
-                  </svg>
+                </button>
+
+                {networkMenuOpen && (
+                  <ul
+                    id={networkMenuId}
+                    role="listbox"
+                    className="absolute right-0 mt-1.5 w-36 rounded-lg border border-surface-600 bg-surface-800 shadow-lg py-1 z-50"
+                  >
+                    {([
+                      { label: 'Mainnet', value: WalletNetworks.Mainnet, dot: 'bg-green-400' },
+                      { label: 'Testnet', value: WalletNetworks.OpnetTestnet, dot: 'bg-orange-400' },
+                    ] as const).map(({ label, value, dot }) => {
+                      const active =
+                        value === WalletNetworks.Mainnet ? isMainnet(network) : !isMainnet(network);
+                      return (
+                        <li
+                          key={label}
+                          role="option"
+                          aria-selected={active}
+                          onClick={() => void handleSwitchNetwork(value)}
+                          className="flex items-center gap-2 px-3 py-1.5 text-xs cursor-pointer text-gray-300 hover:bg-surface-700 hover:text-gray-100 transition-colors"
+                        >
+                          <span className={`h-2 w-2 rounded-full ${dot}`} />
+                          <span className="flex-1">{label}</span>
+                          {active && (
+                            <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5 text-green-400">
+                              <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
                 )}
-              </button>
+              </div>
             )}
             <button
               onClick={toggleTheme}
