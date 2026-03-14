@@ -4,7 +4,7 @@ import type { AbstractRpcProvider } from 'opnet';
 import type { Network } from '@btc-vision/bitcoin';
 import { getKnownSpenders, getKnownTokens } from '../config/contracts.js';
 import { isMainnet, isTestnet } from '../config/networks.js';
-import { discoverTokens } from '../services/TokenDiscovery.js';
+
 import { contractService } from '../services/ContractService.js';
 import type { AllowanceEntry, SpenderInfo, TokenInfo } from '../types/index.js';
 
@@ -211,42 +211,15 @@ export function useAllowances() {
       setEntries([]);
       setLastScan(null);
       setScanErrors([]);
-      setScanStatus('Fetching token list…');
+      setScanStatus('Loading token list…');
 
-      // 1. Discover candidate tokens
-      let knownTokens: TokenInfo[] = [];
-      try {
-        knownTokens = await discoverTokens(network);
-      } catch {
-        knownTokens = getKnownTokens(network);
-      }
-
-      // Merge with user-added custom tokens (avoid duplicates)
+      // 1. Tokens: hardcoded config + user-added custom tokens
+      const knownTokens = getKnownTokens(network);
       const knownAddrs = new Set(knownTokens.map((t) => t.address.toLowerCase()));
       const extraCustom = customTokens.filter((ct) => !knownAddrs.has(ct.address.toLowerCase()));
+      const tokens: TokenInfo[] = [...knownTokens, ...extraCustom];
 
-      // 2. Filter known tokens to those the wallet actually holds (parallel balanceOf)
-      setScanStatus(`Checking wallet balances for ${knownTokens.length} known tokens…`);
-      const balanceResults = await Promise.allSettled(
-        knownTokens.map(async (token) => {
-          const contract = contractService.getTokenContract(token.address, provider, network);
-          contract.setSender(userAddress);
-          const res = await contract.balanceOf(userAddress);
-          return { token, held: res.properties.balance > 0n };
-        }),
-      );
-
-      const heldKnownTokens = balanceResults
-        .filter(
-          (r): r is PromiseFulfilledResult<{ token: TokenInfo; held: boolean }> =>
-            r.status === 'fulfilled' && r.value.held,
-        )
-        .map((r) => r.value.token);
-
-      // Always include custom tokens regardless of balance; only filter known ones
-      const tokens: TokenInfo[] = [...heldKnownTokens, ...extraCustom];
-
-      // 3. Determine spenders
+      // 2. Determine spenders
       const spenders: SpenderInfo[] =
         scanMode === 'custom' ? customSpenders : getKnownSpenders(network);
 
@@ -279,7 +252,7 @@ export function useAllowances() {
         return;
       }
 
-      // 4. Parallel scan: fetch metadata + check all spender allowances per token
+      // 3. Parallel scan: fetch metadata + check all spender allowances per token
       setScanStatus(
         `Scanning ${tokens.length} token${tokens.length !== 1 ? 's' : ''} against ${spenders.length} spender${spenders.length !== 1 ? 's' : ''}…`,
       );
@@ -289,18 +262,20 @@ export function useAllowances() {
           const contract = contractService.getTokenContract(token.address, provider, network);
           contract.setSender(userAddress);
 
-          // Refresh metadata in case custom token placeholder still has '???'
+          // Only fetch metadata for custom tokens that have placeholder info
           let tokenInfo: TokenInfo = token;
-          try {
-            const meta = await contract.metadata();
-            tokenInfo = {
-              ...token,
-              name: meta.properties.name,
-              symbol: meta.properties.symbol,
-              decimals: meta.properties.decimals,
-            };
-          } catch {
-            // keep existing info
+          if (token.symbol === '???') {
+            try {
+              const meta = await contract.metadata();
+              tokenInfo = {
+                ...token,
+                name: meta.properties.name,
+                symbol: meta.properties.symbol,
+                decimals: meta.properties.decimals,
+              };
+            } catch {
+              // keep existing info
+            }
           }
 
           // Check all spenders for this token in parallel

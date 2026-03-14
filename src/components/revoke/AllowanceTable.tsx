@@ -9,6 +9,7 @@ interface AllowanceTableProps {
   scanError: string | null;
   hasScan: boolean;
   explorerUrl: string;
+  mempoolUrl: string;
   selectedIds: Set<string>;
   bulkRevoking: boolean;
   onSelect: (id: string, checked: boolean) => void;
@@ -24,6 +25,7 @@ export function AllowanceTable({
   scanError,
   hasScan,
   explorerUrl,
+  mempoolUrl,
   selectedIds,
   bulkRevoking,
   onSelect,
@@ -184,6 +186,7 @@ export function AllowanceTable({
                 key={entry.id}
                 entry={entry}
                 explorerUrl={explorerUrl}
+                mempoolUrl={mempoolUrl}
                 selected={selectedIds.has(entry.id)}
                 onSelect={onSelect}
                 onRevoke={onRevoke}
