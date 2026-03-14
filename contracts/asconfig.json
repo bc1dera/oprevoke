@@ -20,7 +20,6 @@
   },
   "options": {
     "bindings": "raw",
-    "importMemory": true,
     "initialMemory": 10,
     "maximumMemory": 128,
     "exportRuntime": false,
