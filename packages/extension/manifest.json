@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "OPRevoke Shield",
+  "version": "0.1.0",
+  "description": "Protect your OPNet wallet — phishing alerts, transaction simulation, honeypot detection, and approval monitoring.",
+  "permissions": ["storage", "alarms", "tabs"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "src/background/worker.ts",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content/index.ts"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content/injector.ts"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    }
+  ],
+  "action": {
+    "default_popup": "src/popup/index.html",
+    "default_title": "OPRevoke Shield"
+  }
+}

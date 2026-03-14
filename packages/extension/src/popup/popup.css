@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --surface-900: 13 13 13;
+  --surface-800: 20 20 20;
+  --surface-700: 30 30 30;
+  --surface-600: 45 45 45;
+  --surface-500: 63 63 63;
+}
+
+body {
+  width: 380px;
+  min-height: 500px;
+  max-height: 600px;
+  margin: 0;
+  overflow: hidden;
+  background: rgb(var(--surface-900));
+  color: #e5e7eb;
+}
+
+#root {
+  width: 380px;
+  min-height: 500px;
+  max-height: 600px;
+  display: flex;
+  flex-direction: column;
+}
