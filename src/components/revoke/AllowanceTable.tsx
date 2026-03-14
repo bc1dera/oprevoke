@@ -12,6 +12,8 @@ interface AllowanceTableProps {
   mempoolUrl: string;
   selectedIds: Set<string>;
   bulkRevoking: boolean;
+  /** When true, selected entries will be revoked in a single Bitcoin tx */
+  canBatchSingleTx: boolean;
   onSelect: (id: string, checked: boolean) => void;
   onSelectAll: (checked: boolean) => void;
   onRevoke: (id: string) => void;
@@ -28,6 +30,7 @@ export function AllowanceTable({
   mempoolUrl,
   selectedIds,
   bulkRevoking,
+  canBatchSingleTx,
   onSelect,
   onSelectAll,
   onRevoke,
@@ -145,11 +148,20 @@ export function AllowanceTable({
                   />
                 </svg>
               )}
-              {bulkRevoking
-                ? 'Revoking…'
-                : selectedCount > 0
-                  ? `Revoke Selected (${selectedCount})`
-                  : 'Revoke Selected'}
+              {bulkRevoking ? (
+                'Revoking…'
+              ) : selectedCount > 0 ? (
+                <>
+                  {`Revoke Selected (${selectedCount})`}
+                  {canBatchSingleTx && (
+                    <span className="ml-1.5 px-1.5 py-0.5 rounded text-xs font-bold bg-red-900/60 text-red-200">
+                      1 tx
+                    </span>
+                  )}
+                </>
+              ) : (
+                'Revoke Selected'
+              )}
             </button>
           </div>
         )}

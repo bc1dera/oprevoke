@@ -179,52 +179,54 @@ export default function App() {
     const batchRevokeAddr = getBatchRevokeContract(network);
     const canUseSingleTx = !!batchRevokeAddr && !!walletInstance && toRevoke.length > 1;
 
-    if (canUseSingleTx) {
-      // Single Bitcoin transaction via BatchRevoke contract + OP-712 permits.
-      await contractBatchRevoke(
-        revokeEntries,
-        walletAddress,
-        address,
-        provider,
-        network,
-        walletInstance,
-        (ids, txId) => {
-          for (const id of ids) {
+    try {
+      if (canUseSingleTx) {
+        // Single Bitcoin transaction via BatchRevoke contract + OP-712 permits.
+        await contractBatchRevoke(
+          revokeEntries,
+          walletAddress,
+          address,
+          provider,
+          network,
+          walletInstance,
+          (ids, txId) => {
+            for (const id of ids) {
+              updateEntryStatus(id, 'revoked', undefined, txId);
+            }
+            setSelectedIds((prev) => {
+              const next = new Set(prev);
+              for (const id of ids) next.delete(id);
+              return next;
+            });
+          },
+          (ids, msg) => {
+            for (const id of ids) updateEntryStatus(id, 'error', msg);
+          },
+        );
+      } else {
+        // UTXO-chain fallback: one tx per revocation, chained UTXOs.
+        await batchRevoke(
+          revokeEntries,
+          walletAddress,
+          address,
+          provider,
+          network,
+          (id, txId) => {
             updateEntryStatus(id, 'revoked', undefined, txId);
-          }
-          setSelectedIds((prev) => {
-            const next = new Set(prev);
-            for (const id of ids) next.delete(id);
-            return next;
-          });
-        },
-        (ids, msg) => {
-          for (const id of ids) updateEntryStatus(id, 'error', msg);
-        },
-      );
-    } else {
-      // UTXO-chain fallback: one tx per revocation, chained UTXOs.
-      await batchRevoke(
-        revokeEntries,
-        walletAddress,
-        address,
-        provider,
-        network,
-        (id, txId) => {
-          updateEntryStatus(id, 'revoked', undefined, txId);
-          setSelectedIds((prev) => {
-            const next = new Set(prev);
-            next.delete(id);
-            return next;
-          });
-        },
-        (id, msg) => {
-          updateEntryStatus(id, 'error', msg);
-        },
-      );
+            setSelectedIds((prev) => {
+              const next = new Set(prev);
+              next.delete(id);
+              return next;
+            });
+          },
+          (id, msg) => {
+            updateEntryStatus(id, 'error', msg);
+          },
+        );
+      }
+    } finally {
+      setBulkRevoking(false);
     }
-
-    setBulkRevoking(false);
   }, [entries, selectedIds, provider, network, walletAddress, address, walletInstance, bulkRevoking, batchRevoke, contractBatchRevoke, updateEntryStatus]);
 
   const handleRevoke = useCallback(
@@ -654,6 +656,15 @@ export default function App() {
               onRevoke={(id) => void handleRevoke(id)}
               onRevokeSelected={() => void handleRevokeSelected()}
               bulkRevoking={bulkRevoking}
+              canBatchSingleTx={
+                !!network &&
+                !!getBatchRevokeContract(network) &&
+                !!walletInstance &&
+                Array.from(selectedIds).filter((id) => {
+                  const e = entries.find((en) => en.id === id);
+                  return e && e.status !== 'revoked' && e.status !== 'revoking';
+                }).length > 1
+              }
             />
 
             {/* Collapsible inputs — token input always shown; spender input only on custom tab */}
