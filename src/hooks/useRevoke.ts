@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Address, SignatureType } from '@btc-vision/transaction';
+import { Address, BufferHelper, SignatureType } from '@btc-vision/transaction';
 import { fromBech32 } from '@btc-vision/bitcoin';
 import type { AbstractRpcProvider } from 'opnet';
 import type { UTXO } from 'opnet';
@@ -226,9 +226,9 @@ export function useRevoke() {
           );
 
           // Sign with Schnorr — walletInstance.signData takes hex string, returns hex sig.
-          const msgHex = Buffer.from(msgHash).toString('hex');
+          const msgHex = BufferHelper.uint8ArrayToHex(msgHash);
           const sigHex = await walletInstance.signData(msgHex, SignatureType.schnorr);
-          const signature = Uint8Array.from(Buffer.from(sigHex, 'hex'));
+          const signature = BufferHelper.hexToUint8Array(sigHex);
 
           calldataEntries.push({
             token: tokenBytes,
