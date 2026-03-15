@@ -204,7 +204,16 @@ export function useRevoke() {
 
           const spenderAddr = parseSpender(spenderAddress);
           const spenderBytes = spenderAddr.toBuffer();
-          const tokenBytes = parseSpender(tokenAddress).toBuffer();
+          // CANNOT use parseSpender(tokenAddress) for opt1sq... bech32 addresses:
+          // fromBech32().data gives 21 bytes (version + hash160), not 32, so
+          // Address.wrap(21bytes) throws "Invalid ML-DSA public key length: 21".
+          // provider.getPublicKeyInfo does a proper RPC lookup and returns the
+          // correct 32-byte Address content.
+          const tokenAddrObj = await provider.getPublicKeyInfo(tokenAddress, true);
+          if (!tokenAddrObj) {
+            throw new Error(`Token address not found on network: ${tokenAddress}`);
+          }
+          const tokenBytes = tokenAddrObj.toBuffer();
 
           // Build OP-712 permit hash.
           const msgHash = buildPermitHash(
@@ -238,7 +247,16 @@ export function useRevoke() {
         // provider.call() returns a bare CallResult that is missing the `calldata`,
         // `to`, and `address` fields that sendTransaction() requires.
         // We must set them manually before calling sendTransaction.
-        const batchRevokeAddrObj = parseSpender(batchRevokeAddr);
+        //
+        // IMPORTANT: parseSpender() uses fromBech32().data which returns only 21 bytes
+        // (1 version byte + 20-byte hash160) for OPNet opt1sq... addresses. That is NOT
+        // the 32-byte address content, so Address.wrap(21bytes) throws
+        // "Invalid ML-DSA public key length: 21". Use provider.getPublicKeyInfo instead,
+        // which does a proper RPC lookup to retrieve the 32-byte contract address.
+        const batchRevokeAddrObj = await provider.getPublicKeyInfo(batchRevokeAddr, true);
+        if (!batchRevokeAddrObj) {
+          throw new Error(`BatchRevoke contract address not found: ${batchRevokeAddr}`);
+        }
 
         // Simulate via provider.call.
         const callResult = await provider.call(batchRevokeAddr, calldata, userAddress);
