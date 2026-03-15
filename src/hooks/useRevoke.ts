@@ -185,22 +185,49 @@ export function useRevoke() {
 
         const calldataEntries: BatchRevokeCalldataEntry[] = [];
 
+        // Track nonces per token: when multiple permits reference the same token
+        // the first permit increments the on-chain nonce during execution, so each
+        // subsequent permit for that token must use nonce+1, nonce+2, etc.
+        // Without this, all permits for the same token would carry the same stale
+        // nonce and every one after the first would fail with "Invalid signature".
+        const nonceCache = new Map<string, bigint>();
+        // Cache domain separators too (they never change within a block).
+        const domainSeparatorCache = new Map<string, Uint8Array>();
+        // Cache token address bytes to avoid redundant RPC lookups.
+        const tokenBytesCache = new Map<string, Uint8Array>();
+
         for (const entry of entries) {
           const { tokenAddress, spenderAddress, currentAllowance } = entry;
 
           const contract = contractService.getTokenContract(tokenAddress, provider, network);
 
-          // Fetch domain separator and owner nonce in parallel.
-          const [dsResult, nonceResult] = await Promise.all([
-            contract.domainSeparator(),
-            contract.nonceOf(userAddress),
-          ]);
+          let domainSeparator: Uint8Array;
+          let nonce: bigint;
 
-          if (dsResult.revert) throw new Error(`domainSeparator reverted: ${dsResult.revert}`);
-          if (nonceResult.revert) throw new Error(`nonceOf reverted: ${nonceResult.revert}`);
+          const cachedNonce = nonceCache.get(tokenAddress);
+          const cachedDs = domainSeparatorCache.get(tokenAddress);
 
-          const domainSeparator = dsResult.properties.domainSeparator;
-          const nonce = nonceResult.properties.nonce;
+          if (cachedNonce !== undefined && cachedDs !== undefined) {
+            // Subsequent permit for this token — use locally-incremented nonce.
+            domainSeparator = cachedDs;
+            nonce = cachedNonce;
+          } else {
+            // First permit for this token — fetch both from chain in parallel.
+            const [dsResult, nonceResult] = await Promise.all([
+              contract.domainSeparator(),
+              contract.nonceOf(userAddress),
+            ]);
+
+            if (dsResult.revert) throw new Error(`domainSeparator reverted: ${dsResult.revert}`);
+            if (nonceResult.revert) throw new Error(`nonceOf reverted: ${nonceResult.revert}`);
+
+            domainSeparator = dsResult.properties.domainSeparator as Uint8Array;
+            nonce = nonceResult.properties.nonce as bigint;
+            domainSeparatorCache.set(tokenAddress, domainSeparator);
+          }
+
+          // Advance the cached nonce so the next permit for this token uses nonce+1.
+          nonceCache.set(tokenAddress, nonce + 1n);
 
           const spenderAddr = parseSpender(spenderAddress);
           const spenderBytes = spenderAddr.toBuffer();
@@ -209,11 +236,15 @@ export function useRevoke() {
           // Address.wrap(21bytes) throws "Invalid ML-DSA public key length: 21".
           // provider.getPublicKeyInfo does a proper RPC lookup and returns the
           // correct 32-byte Address content.
-          const tokenAddrObj = await provider.getPublicKeyInfo(tokenAddress, true);
-          if (!tokenAddrObj) {
-            throw new Error(`Token address not found on network: ${tokenAddress}`);
+          let tokenBytes = tokenBytesCache.get(tokenAddress);
+          if (!tokenBytes) {
+            const tokenAddrObj = await provider.getPublicKeyInfo(tokenAddress, true);
+            if (!tokenAddrObj) {
+              throw new Error(`Token address not found on network: ${tokenAddress}`);
+            }
+            tokenBytes = tokenAddrObj.toBuffer();
+            tokenBytesCache.set(tokenAddress, tokenBytes);
           }
-          const tokenBytes = tokenAddrObj.toBuffer();
 
           // Build OP-712 permit hash.
           const msgHash = buildPermitHash(
@@ -261,13 +292,10 @@ export function useRevoke() {
         // Simulate via provider.call.
         const callResult = await provider.call(batchRevokeAddr, calldata, userAddress);
 
-        // Check for RPC-level error (ICallRequestError has an `error` field).
+        // provider.call() converts both RPC errors and contract reverts into
+        // { error: string } — callResult.revert is never populated by this path.
         if ('error' in callResult) {
           throw new Error(`BatchRevoke simulation failed: ${callResult.error}`);
-        }
-
-        if (callResult.revert) {
-          throw new Error(`BatchRevoke simulation reverted: ${callResult.revert}`);
         }
 
         // Populate the fields that sendTransaction requires but provider.call doesn't set.
